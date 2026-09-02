@@ -6,8 +6,13 @@ on:
       ENVIRONMENT:
         required: true
         type: string
-      BASE_URL:
-        description: Base URL of the API that was just deployed
+      STACK_NAME:
+        description: |
+          Stack recien desplegado. Su artefacto aws-exports-<stack> trae la URL
+          del API. No se recibe la URL directamente porque las salidas entre
+          jobs pasan por el enmascarado de secrets de GitHub: si el valor de
+          algun secret aparece como subcadena de la URL, la salida llega vacia.
+          El contenido de los artefactos no se escanea, asi que es fiable.
         required: true
         type: string
 
@@ -23,6 +28,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Download aws-exports.json
+        uses: actions/download-artifact@v4
+        with:
+          name: aws-exports-${{ inputs.STACK_NAME }}
+
       - name: Cache npm
         uses: actions/cache@v4
         with:
@@ -36,14 +46,15 @@ jobs:
       # configurar credenciales de AWS aqui y generar ./portman/.env-portman
       # con PORTMAN_BEARER_TOKEN antes de este paso.
       - name: Test API
-        env:
-          BASE_URL: ${{ inputs.BASE_URL }}
         run: |
-          # Si BASE_URL llega vacia, Portman no falla: cae al bloque servers del
-          # contrato, que es un marcador de posicion, y revienta con un ENOTFOUND
-          # que no dice nada del problema real. Mejor detenerse aqui.
+          BASE_URL=$(jq -r '.ApiURL // empty' aws-exports.json)
+
+          # Sin URL, Portman no falla: cae al bloque servers del contrato, que es
+          # un marcador de posicion, y revienta con un ENOTFOUND que no dice nada
+          # del problema real. Mejor detenerse aqui.
           if [ -z "$BASE_URL" ]; then
-            echo "::error::BASE_URL vino vacia desde el job de despliegue."
+            echo "::error::aws-exports.json no trae ApiURL."
+            cat aws-exports.json
             exit 1
           fi
 
