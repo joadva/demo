@@ -36,13 +36,24 @@ jobs:
       # configurar credenciales de AWS aqui y generar ./portman/.env-portman
       # con PORTMAN_BEARER_TOKEN antes de este paso.
       - name: Test API
+        env:
+          BASE_URL: ${{ inputs.BASE_URL }}
         run: |
+          # Si BASE_URL llega vacia, Portman no falla: cae al bloque servers del
+          # contrato, que es un marcador de posicion, y revienta con un ENOTFOUND
+          # que no dice nada del problema real. Mejor detenerse aqui.
+          if [ -z "$BASE_URL" ]; then
+            echo "::error::BASE_URL vino vacia desde el job de despliegue."
+            exit 1
+          fi
+
           npm ci
 
           echo "### Postman / Portman Tests" >> $GITHUB_STEP_SUMMARY
+          echo "* Base URL: $BASE_URL" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          npx @apideck/portman --cliOptionsFile ./portman/portman-cli.json --baseUrl ${{ inputs.BASE_URL }}
+          npx @apideck/portman --cliOptionsFile ./portman/portman-cli.json --baseUrl "$BASE_URL"
 
       - uses: actions/upload-artifact@v4
         if: ${{ success() || failure() }}

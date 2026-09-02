@@ -11,8 +11,11 @@ tags:
     description: Tool endpoints
 
 servers:
-  - url: https://x1orn0jhw1.execute-api.us-east-1.amazonaws.com/api
-    description: QA
+  # Marcador de posicion. publish-docs.yaml lo reemplaza al publicar con
+  # las URLs reales de los stacks desplegados, y el job de post-deploy le pasa
+  # a Portman la suya con --baseUrl. Nadie deberia usar este valor.
+  - url: https://reemplazar.execute-api.us-east-1.amazonaws.com/api
+    description: Placeholder
 
 x-amazon-apigateway-request-validators:
   Validate body, query string parameters, and headers:
