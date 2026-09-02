@@ -80,6 +80,96 @@ Resources:
           Parameters:
             Location: ./openapi.yaml
 
+  # Endpoints sin dependencias externas: no leen base de datos ni servicios de
+  # terceros, por eso siempre responden 200 y sirven para validar el despliegue.
+  PingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/ping
+      Handler: index.handler
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref API
+            Path: /ping
+            Method: GET
+      Policies:
+        - AWSLambdaBasicExecutionRole
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: esm
+        Minify: false
+        OutExtension:
+          - .js=.mjs
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - index.mjs
+        Banner:
+          - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+
+  InfoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/info
+      Handler: index.handler
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref API
+            Path: /info
+            Method: GET
+      Environment:
+        Variables:
+          SERVICE_NAME: demo-api
+          SERVICE_VERSION: 1.0.0
+      Policies:
+        - AWSLambdaBasicExecutionRole
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: esm
+        Minify: false
+        OutExtension:
+          - .js=.mjs
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - index.mjs
+        Banner:
+          - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+
+  EchoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/echo
+      Handler: index.handler
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref API
+            Path: /echo
+            Method: POST
+      Policies:
+        - AWSLambdaBasicExecutionRole
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: esm
+        Minify: false
+        OutExtension:
+          - .js=.mjs
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - index.mjs
+        Banner:
+          - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+
   StatusFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -297,9 +387,19 @@ Resources:
           - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 
 Outputs:
+  # Estos outputs son la fuente del aws-exports.json que consume el frontend.
+  # Todo lo que se agregue aqui aparece en ese archivo automaticamente.
   ApiURL:
     Description: API URL
     Value: !Sub https://${API}.execute-api.${AWS::Region}.amazonaws.com/api
+
+  Region:
+    Description: Region donde vive el API
+    Value: !Ref AWS::Region
+
+  StackName:
+    Description: Nombre del stack que atiende estas rutas
+    Value: !Ref AWS::StackName
 
   # Ver la nota del recurso DatabaseConnectionSecret en la seccion Resources.
   #

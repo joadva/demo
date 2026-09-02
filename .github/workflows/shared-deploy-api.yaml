@@ -104,3 +104,22 @@ jobs:
           echo "* API: $url" >> $GITHUB_STEP_SUMMARY
 
           echo "API_BASE_URL=$url" >> $GITHUB_OUTPUT
+
+      # Equivalente al amplify_outputs.json: convierte los Outputs del stack en
+      # un JSON plano que el workflow del frontend descarga para construir
+      # apuntando al API correcto, incluso en los stacks efimeros de cada PR.
+      - name: Generate aws-exports.json
+        run: |
+          aws cloudformation describe-stacks \
+            --stack-name ${{ inputs.STACK_NAME }} \
+            --query "Stacks[0].Outputs" --output json \
+            | jq 'map({(.OutputKey): .OutputValue}) | add' > aws-exports.json
+
+          cat aws-exports.json
+
+      - name: Upload aws-exports.json
+        uses: actions/upload-artifact@v4
+        with:
+          name: aws-exports-${{ inputs.STACK_NAME }}
+          path: aws-exports.json
+          if-no-files-found: error

@@ -48,6 +48,18 @@ jobs:
       STACK_NAME: ${{ needs.get-stack-name.outputs.STACK_NAME }}
     secrets: inherit
 
+  publish-docs:
+    name: Publish API Docs
+    needs: [deploy-api]
+    # Solo tras desplegar el ambiente compartido. Los stacks efimeros de cada PR
+    # tienen URLs que mueren con el PR y no deben acabar en el sitio publico.
+    if: ${{ github.event_name == 'push' }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/publish-docs.yaml
+
   post-deploy-validations:
     name: Post-Deployment
     needs: [deploy-api]

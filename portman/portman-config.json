@@ -201,7 +201,17 @@
     "stripResponseExamples": true,
     "valueReplacements": {},
     "rawReplacements": [],
-    "orderOfOperations": [],
+    "orderOfOperations": [
+      "GET::/ping",
+      "GET::/info",
+      "POST::/echo",
+      "GET::/status",
+      "POST::/clientes",
+      "GET::/clientes",
+      "GET::/clientes/{clienteId}",
+      "PUT::/clientes/{clienteId}",
+      "DELETE::/clientes/{clienteId}"
+    ],
     "securityOverwrites": {
     }
   }

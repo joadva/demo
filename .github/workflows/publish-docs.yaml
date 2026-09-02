@@ -1,0 +1,105 @@
+name: Publish API Docs
+
+# Publica la documentacion OpenAPI como Swagger UI en GitHub Pages, con los
+# servidores tomados de los stacks realmente desplegados.
+# Requiere: Settings -> Pages -> Source: "GitHub Actions".
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - openapi.yaml
+      - docs/swagger/**
+      - .github/workflows/publish-docs.yaml
+  # Lo llama deploy-dev.yaml al terminar un despliegue, para que las URLs del
+  # sitio queden al dia sin intervencion.
+  workflow_call:
+  # Y a mano, para refrescar cuando haga falta.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un despliegue de Pages a la vez; no se cancela el que va corriendo para no
+# dejar el sitio a medias.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Site
+    runs-on: ubuntu-latest
+    # Necesario para leer vars.PIPELINE_EXECUTION_ROLE.
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ vars.PIPELINE_EXECUTION_ROLE }}
+          role-session-name: demo-docs
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp docs/swagger/index.html _site/index.html
+          # Swagger UI lee el contrato desde ./openapi.yaml, al lado del html.
+          cp openapi.yaml _site/openapi.yaml
+
+      # El bloque servers del repo apunta a una URL fija que envejece. Aqui se
+      # reemplaza por las URLs reales de los stacks que existan. Solo se toca la
+      # copia publicada; openapi.yaml en el repo queda intacto.
+      - name: Inject deployed API URLs
+        run: |
+          yq -i '.servers = []' _site/openapi.yaml
+          encontrados=0
+
+          for entrada in "secrets-dev:Dev" "secrets-test:Test" "secrets-prod:Prod"; do
+            stack="${entrada%%:*}"
+            etiqueta="${entrada##*:}"
+
+            url=$(aws cloudformation describe-stacks \
+                    --stack-name "$stack" \
+                    --query "Stacks[0].Outputs[?OutputKey=='ApiURL'].OutputValue" \
+                    --output text 2>/dev/null || true)
+
+            if [ -n "$url" ] && [ "$url" != "None" ]; then
+              yq -i ".servers += [{\"url\": \"$url\", \"description\": \"$etiqueta\"}]" _site/openapi.yaml
+              echo "* $etiqueta: $url" >> $GITHUB_STEP_SUMMARY
+              encontrados=1
+            else
+              echo "Stack $stack no desplegado; se omite."
+            fi
+          done
+
+          # Sin ningun stack vivo, un servers vacio rompe el "Try it out".
+          # Mejor conservar el del repo que publicar algo inservible.
+          if [ "$encontrados" = "0" ]; then
+            echo "::warning::Ningun stack desplegado; se conserva el bloque servers del repositorio."
+            cp openapi.yaml _site/openapi.yaml
+          fi
+
+          yq '.servers' _site/openapi.yaml
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to Pages
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

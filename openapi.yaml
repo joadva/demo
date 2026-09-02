@@ -66,6 +66,87 @@ paths:
         httpMethod: POST
         type: aws_proxy
 
+  /ping:
+    get:
+      summary: Liveness check
+      operationId: ping
+      description: |
+        Always answers 200. No depende de la base de datos ni de servicios
+        externos, asi que sirve para verificar que el despliegue quedo vivo.
+      tags:
+        - Tool
+      responses:
+        '200':
+          description: 'Success'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/pong'
+        '500':
+          $ref: '#/components/responses/unexpectedError'
+      x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PingFunction.Arn}/invocations
+        httpMethod: POST
+        type: aws_proxy
+
+  /info:
+    get:
+      summary: Service metadata
+      operationId: info
+      description: |
+        Returns the service name, version and region. Solo lee variables de
+        entorno, asi que tampoco depende de nada externo.
+      tags:
+        - Tool
+      responses:
+        '200':
+          description: 'Success'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/serviceInfo'
+        '500':
+          $ref: '#/components/responses/unexpectedError'
+      x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoFunction.Arn}/invocations
+        httpMethod: POST
+        type: aws_proxy
+
+  /echo:
+    post:
+      summary: Echo the request body
+      operationId: echo
+      description: |
+        Devuelve el mismo cuerpo que recibio. Util para comprobar de punta a
+        punta el validador de peticiones y la integracion con la Lambda.
+      tags:
+        - Tool
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/echoInput'
+      responses:
+        '200':
+          description: 'Success'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/echoOutput'
+        '500':
+          $ref: '#/components/responses/unexpectedError'
+      x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EchoFunction.Arn}/invocations
+        httpMethod: POST
+        type: aws_proxy
+
   /clientes:
     get:
       summary: List clientes
@@ -243,6 +324,61 @@ paths:
 
 components:
   schemas:
+    pong:
+      type: object
+      required:
+        - message
+        - timestamp
+      properties:
+        message:
+          type: string
+          maxLength: 20
+        timestamp:
+          type: string
+          format: date-time
+
+    serviceInfo:
+      type: object
+      required:
+        - service
+        - version
+        - region
+        - timestamp
+      properties:
+        service:
+          type: string
+          maxLength: 60
+        version:
+          type: string
+          maxLength: 20
+        region:
+          type: string
+          maxLength: 30
+        timestamp:
+          type: string
+          format: date-time
+
+    echoInput:
+      type: object
+      additionalProperties: true
+      properties:
+        mensaje:
+          type: string
+          maxLength: 500
+
+    echoOutput:
+      type: object
+      required:
+        - receivedAt
+        - payload
+      properties:
+        receivedAt:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+
     cliente:
       type: object
       required:
