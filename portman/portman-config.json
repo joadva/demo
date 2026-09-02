@@ -95,106 +95,11 @@
             }
           }
         ]
-      },
-      {
-        "openApiOperation": "GET::/clientes/{clientId}/referencias",
-        "openApiResponse": "404",
-        "variations": [
-          {
-            "name": "Not Found",
-            "tests": {
-              "contractTests": [
-                {
-                  "statusCode": {
-                    "enabled": true
-                  },
-                  "contentType": {
-                    "enabled": true
-                  },
-                  "jsonBody": {
-                    "enabled": true
-                  },
-                  "schemaValidation": {
-                    "enabled": true
-                  },
-                  "headersPresent": {
-                    "enabled": true
-                  }
-                }
-              ]
-            },
-            "overwrites": [
-              {
-                "overwriteRequestPathVariables": [
-                  {
-                    "key": "clientId",
-                    "value": "0",
-                    "overwrite": true
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "openApiOperation": "GET::/prospectos/{prospectId}/referencias",
-        "openApiResponse": "404",
-        "variations": [
-          {
-            "name": "Not Found",
-            "tests": {
-              "contractTests": [
-                {
-                  "statusCode": {
-                    "enabled": true
-                  },
-                  "contentType": {
-                    "enabled": true
-                  },
-                  "jsonBody": {
-                    "enabled": true
-                  },
-                  "schemaValidation": {
-                    "enabled": true
-                  },
-                  "headersPresent": {
-                    "enabled": true
-                  }
-                }
-              ]
-            },
-            "overwrites": [
-              {
-                "overwriteRequestPathVariables": [
-                  {
-                    "key":"prospectId",
-                    "value": "0",
-                    "overwrite": true
-                  }
-                ]
-              }
-            ]
-          }
-        ]
       }
     ]
   },
   "assignVariables": [],
-  "overwrites": [
-    {
-      "openApiOperationIds": [
-        "getClientReferences"
-      ],
-      "overwriteRequestPathVariables": [
-        {
-          "key": "clientId",
-          "value": "1369",
-          "overwrite": true
-        }
-      ]
-    }
-  ],
+  "overwrites": [],
   "operationPreRequestScripts": [],
   "globals": {
     "keyValueReplacements": {},
@@ -205,14 +110,8 @@
       "GET::/ping",
       "GET::/info",
       "POST::/echo",
-      "GET::/status",
-      "POST::/clientes",
-      "GET::/clientes",
-      "GET::/clientes/{clienteId}",
-      "PUT::/clientes/{clienteId}",
-      "DELETE::/clientes/{clienteId}"
+      "GET::/status"
     ],
-    "securityOverwrites": {
-    }
+    "securityOverwrites": {}
   }
 }

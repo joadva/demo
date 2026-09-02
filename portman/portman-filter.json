@@ -1,9 +1,3 @@
 {
-  "operationIds": [
-    "listClientes",
-    "createCliente",
-    "getCliente",
-    "updateCliente",
-    "deleteCliente"
-  ]
+  "operationIds": []
 }
