@@ -5,7 +5,7 @@ Backend for the mobile client app. This project provides backend services and AP
 ## Overview
 This project is the backend for the mobile client application. It handles all business logic, integrations, and data management required by the app, including user authentication, client data operations, and integration with external services.
 
-## Features
+## Features a
 - AWS Lambda serverless architecture
 - API Gateway for RESTful endpoints
 - User authentication and client data management
