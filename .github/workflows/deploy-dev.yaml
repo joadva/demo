@@ -1,37 +1,51 @@
 name: Deploy Dev
-run-name: Deploy ${{ github.event_name == 'workflow_dispatch' && github.ref_name || github.event_name == 'pull_request' && github.head_ref }} to Dev
+run-name: Deploy ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }} to Dev
 
 on:
+  # Push a dev despliega el ambiente compartido secrets-dev.
   push:
     branches:
       - dev
+  # Cada Pull Request levanta su propio stack efimero, que cleanup-dev.yaml
+  # elimina al cerrarlo.
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 concurrency:
-  group: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || github.event_name == 'pull_request' && github.head_ref }}
+  group: deploy-dev-${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 permissions:
   id-token: write
   contents: read
   pull-requests: read
 
-env:
-  ENVIRONMENT: dev
-  BRANCH_NAME: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || github.event_name == 'pull_request' && github.head_ref }}
-  APP_NAME: demo-secrets
-
 jobs:
   pre-deploy-validations:
     name: Pre-Deployment
     uses: ./.github/workflows/pre-deploy-validations.yaml
 
+  get-stack-name:
+    name: Resolve Stack Name
+    uses: ./.github/workflows/resolve-stack-name.yaml
+    with:
+      # El contexto env no esta disponible aqui, por eso el prefijo va literal.
+      APP_NAME: demo-secrets
+      # En un PR se calcula desde la rama; en push a dev se fuerza el fijo.
+      BRANCH_NAME: ${{ github.event_name == 'pull_request' && github.head_ref || '' }}
+      STACK_NAME: ${{ github.event_name == 'push' && 'secrets-dev' || '' }}
+
   deploy-api:
     name: API Deployment
-    needs: [pre-deploy-validations]
+    needs: [pre-deploy-validations, get-stack-name]
     uses: ./.github/workflows/shared-deploy-api.yaml
     with:
       ENVIRONMENT: dev
       AWS_REGION: us-east-1
-      STACK_NAME: secrets-dev
+      STACK_NAME: ${{ needs.get-stack-name.outputs.STACK_NAME }}
     secrets: inherit
 
   post-deploy-validations:

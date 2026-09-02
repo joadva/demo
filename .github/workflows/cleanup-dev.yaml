@@ -1,4 +1,5 @@
 name: Cleanup Dev
+run-name: Cleanup ${{ github.event_name == 'pull_request' && github.head_ref || github.event.ref || github.ref_name }}
 
 on:
   delete:
@@ -23,55 +24,16 @@ permissions:
   contents: read
   pull-requests: read
 
-env:
-  APP_NAME: demo-secrets
-  AWS_REGION: us-east-1
-
 jobs:
   get-stack-name:
     name: Resolve Stack Name
-    runs-on: ubuntu-latest
     # El evento delete tambien dispara al borrar etiquetas; solo interesan ramas.
     if: ${{ github.event_name != 'delete' || github.event.ref_type == 'branch' }}
-    outputs:
-      STACK_NAME: ${{ steps.resolve.outputs.STACK_NAME }}
-    steps:
-      - name: Resolve stack name
-        id: resolve
-        env:
-          INPUT_STACK_NAME: ${{ inputs.STACK_NAME }}
-          BRANCH_NAME: ${{ github.event_name == 'pull_request' && github.head_ref || github.event_name == 'delete' && github.event.ref || github.ref_name }}
-        run: |
-          if [ -n "$INPUT_STACK_NAME" ]; then
-            STACK_NAME="$INPUT_STACK_NAME"
-          elif [ -z "$BRANCH_NAME" ]; then
-            echo "No se pudo determinar la rama; no hay nada que limpiar."
-            echo "STACK_NAME=" >> $GITHUB_OUTPUT
-            exit 0
-          elif [ "${BRANCH_NAME#dependabot/}" != "$BRANCH_NAME" ]; then
-            # Todas las ramas de dependabot comparten un mismo stack.
-            STACK_NAME="${APP_NAME}-dependabot"
-          else
-            # minusculas, sin caracteres especiales, recortado a 9 caracteres
-            SLUG=$(echo "$BRANCH_NAME" \
-              | tr '[:upper:]' '[:lower:]' \
-              | sed 's/[^a-z0-9]/-/g' \
-              | cut -c1-9 \
-              | sed 's/-*$//')
-            STACK_NAME="${APP_NAME}-${SLUG}"
-          fi
-
-          # Salvaguarda: los stacks fijos de cada ambiente nunca se borran aqui.
-          case "$STACK_NAME" in
-            secrets-dev|secrets-test|secrets-prod)
-              echo "::error::Rechazado: $STACK_NAME es el stack fijo de un ambiente, no un stack efimero."
-              exit 1
-              ;;
-          esac
-
-          echo "STACK_NAME=$STACK_NAME" >> $GITHUB_OUTPUT
-          echo "# Cleanup" >> $GITHUB_STEP_SUMMARY
-          echo "* Stack a eliminar: \`$STACK_NAME\`" >> $GITHUB_STEP_SUMMARY
+    uses: ./.github/workflows/resolve-stack-name.yaml
+    with:
+      APP_NAME: demo-secrets
+      BRANCH_NAME: ${{ github.event_name == 'pull_request' && github.head_ref || github.event_name == 'delete' && github.event.ref || github.event_name == 'workflow_dispatch' && github.ref_name || '' }}
+      STACK_NAME: ${{ inputs.STACK_NAME }}
 
   cleanup-resources:
     name: Cleanup Resources
@@ -79,7 +41,22 @@ jobs:
     if: ${{ needs.get-stack-name.outputs.STACK_NAME != '' }}
     runs-on: ubuntu-latest
     environment: dev
+    env:
+      STACK_NAME: ${{ needs.get-stack-name.outputs.STACK_NAME }}
+      AWS_REGION: us-east-1
     steps:
+      # Los stacks efimeros siempre llevan el prefijo demo-secrets-, asi que una
+      # colision con los fijos no deberia ocurrir. Este freno existe porque el
+      # nombre tambien puede llegar escrito a mano por workflow_dispatch.
+      - name: Proteger los stacks fijos
+        run: |
+          case "$STACK_NAME" in
+            secrets-dev|secrets-test|secrets-prod)
+              echo "::error::Rechazado: $STACK_NAME es el stack fijo de un ambiente, no uno efimero."
+              exit 1
+              ;;
+          esac
+
       - uses: actions/checkout@v4
 
       - name: Configure AWS
@@ -92,8 +69,6 @@ jobs:
           role-skip-session-tagging: true
 
       - name: Delete stack
-        env:
-          STACK_NAME: ${{ needs.get-stack-name.outputs.STACK_NAME }}
         run: |
           # sam delete truena si el stack no existe, y eso pasa seguido:
           # ramas que nunca desplegaron, o limpiezas repetidas.

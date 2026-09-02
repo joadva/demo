@@ -1,86 +1,58 @@
 # Documentación: Workflow Deploy Dev
 
 ## ¿Qué es este archivo?
-Este archivo es un workflow de GitHub Actions llamado **Deploy Dev**. Su función es desplegar automáticamente la aplicación `demo-api-appCliente` en el entorno de desarrollo (dev) cada vez que se abre un Pull Request hacia la rama `master` o se ejecuta manualmente.
+`.github/workflows/deploy-dev.yaml` despliega la API en el ambiente de desarrollo. Tiene dos modos según el evento que lo dispara:
+
+| Evento | Stack | Vida |
+|---|---|---|
+| Push a la rama `dev` | `secrets-dev` | Permanente, ambiente compartido |
+| Pull Request abierto, actualizado o reabierto | `demo-secrets-<slug>` | Efímero, se borra al cerrar el PR |
+
+Ambos usan el mismo Environment de GitHub (`dev`), así que comparten rol, bucket de artefactos y credenciales de base de datos.
 
 ---
 
 ## ¿Cuándo se ejecuta?
-Se activa en estos casos:
-- Cuando se ejecuta manualmente desde GitHub (`workflow_dispatch`)
-- Cuando se abre un Pull Request hacia la rama `master` (`pull_request`)
+- Push a la rama `dev`.
+- Pull Request con los tipos `opened`, `synchronize` y `reopened`. Cada push al PR vuelve a desplegar su stack.
 
----
-
-## ¿Qué permisos usa?
-Solicita permisos mínimos para leer Pull Requests, escribir tokens de identidad y leer el contenido del repositorio. En el job de auto-merge para dependabot, también solicita permisos de escritura para PRs y contenido.
-
----
-
-## Variables de entorno
-- `ENVIRONMENT`: Define el entorno de despliegue, aquí es `dev`.
-- `BRANCH_NAME`: Detecta el nombre de la rama o PR que disparó el workflow.
-- `APP_NAME`: Nombre base de la aplicación, aquí es `demo-api-appCliente`.
+La concurrencia está agrupada por rama con `cancel-in-progress`, así que si empujas dos veces seguidas al mismo PR, la ejecución anterior se cancela en vez de encimarse.
 
 ---
 
 ## ¿Qué trabajos (jobs) realiza?
 
-### 1. get-stack-name
-- **Propósito:** Calcula el nombre del stack de AWS que se debe desplegar.
-- **¿Cómo lo hace?**
-  - Si la rama es de dependabot, el stack se llama `demo-api-appCliente-dependabot`.
-  - Si no, toma el nombre de la rama, lo convierte a minúsculas, reemplaza caracteres especiales y lo recorta a 9 caracteres, para formar el nombre del stack.
-  - Guarda ese nombre como variable de salida (`STACK_NAME`).
+### 1. pre-deploy-validations
+Llama a `pre-deploy-validations.yaml`: lint del código, lint del OpenAPI si cambió, y las pruebas con cobertura.
 
-### 2. pre-deploy-validations
-- **Propósito:** Ejecuta validaciones previas al despliegue.
-- **¿Cómo lo hace?**
-  - Llama a un workflow compartido (`pre-deploy-validations.yaml`) para verificar que todo esté listo antes de desplegar.
+### 2. get-stack-name
+Llama a `resolve-stack-name.yaml`, que es la única fuente de verdad del nombre:
+
+- En un **push a `dev`** se le pasa `STACK_NAME: secrets-dev` y lo devuelve tal cual.
+- En un **Pull Request** se le pasa la rama y calcula: si es de dependabot, `demo-secrets-dependabot`; si no, toma el nombre de la rama en minúsculas, reemplaza lo que no sea `a-z0-9` por guiones y lo recorta a 9 caracteres → `demo-secrets-<slug>`.
+
+`cleanup-dev.yaml` invoca ese mismo workflow para saber qué borrar. Por eso la regla vive en un solo archivo: si estuviera duplicada, cualquier ajuste dejaría stacks huérfanos que nadie elimina.
 
 ### 3. deploy-api
-- **Propósito:** Despliega la API en AWS.
-- **¿Cómo lo hace?**
-  - Usa el workflow compartido (`shared-deploy-api.yaml`) y los valores calculados en los pasos anteriores para desplegar la aplicación en el entorno dev.
+Usa `shared-deploy-api.yaml`: asume el rol de AWS por OIDC, sustituye los secrets en `samconfig.ci.yaml`, y corre `sam build` y `sam deploy` sobre el stack resuelto. Expone la URL del API como salida.
 
 ### 4. post-deploy-validations
-- **Propósito:** Ejecuta validaciones posteriores al despliegue.
-- **¿Cómo lo hace?**
-  - Llama al workflow compartido (`post-deploy-validations.yaml`) para verificar que el despliegue fue exitoso y la API está disponible.
+Llama a `post-deploy-validations.yaml`, que corre Portman contra la URL recién desplegada. Está marcado como `continue-on-error`, así que sus fallas no tumban un despliegue que ya salió bien.
 
 ### 5. auto-merge-dependabot-update
-- **Propósito:** Aprueba y fusiona automáticamente actualizaciones de dependabot.
-- **¿Cómo lo hace?**
-  - Si el actor es dependabot y el evento es un PR, aprueba y fusiona el PR automáticamente si cumple ciertos criterios.
-
-### 6. cleanup-stack
-- **Propósito:** Limpia los recursos de AWS asociados al stack cuando ya no se necesitan.
-- **¿Cómo lo hace?**
-  - Llama al workflow `cleanup-dev.yaml` para eliminar el stack correspondiente, heredando los secretos y permisos necesarios.
+Si el PR es de dependabot y la actualización es menor o de parche, lo aprueba y lo pone en auto-merge.
 
 ---
 
-## ¿Por qué es útil?
-- Automatiza el despliegue en el entorno de desarrollo, facilitando pruebas y validaciones continuas.
-- Mantiene el entorno limpio eliminando stacks innecesarios.
-- Permite la integración continua y la gestión automática de dependencias.
+## La limpieza no vive aquí
+El borrado de los stacks efímeros lo hace `cleanup-dev.yaml`, que se dispara solo al cerrar el PR o al borrar la rama. Ver `cleanup-dev-doc.md`.
 
 ---
 
-## ¿Cómo se usa?
-No necesitas hacer nada especial. Si abres un PR hacia `master` o ejecutas el workflow manualmente, el despliegue se realiza automáticamente. La limpieza de recursos también se ejecuta automáticamente al cerrar el PR o cuando dependabot fusiona actualizaciones.
+## Requisitos
+En el Environment `dev` de GitHub:
 
----
+- **Variables:** `PIPELINE_EXECUTION_ROLE`, `CLOUDFORMATION_EXECUTION_ROLE`, `ARTIFACTS_BUCKET_NAME`
+- **Secrets:** `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_PORT`, `DB_DATABASE`
 
-## Resumen visual del flujo
-1. Detecta el evento (PR, ejecución manual)
-2. Calcula el nombre del stack a desplegar
-3. Ejecuta validaciones previas
-4. Despliega la API
-5. Ejecuta validaciones posteriores
-6. Aprueba y fusiona PRs de dependabot (si aplica)
-7. Elimina el stack cuando ya no se necesita
-
----
-
-Si tienes dudas, revisa el archivo `.github/workflows/deploy-dev.yaml` o contacta al responsable del repositorio.
+Los tres valores de las variables salen de los Outputs de la pila `pipeline-bootstrap.yaml`.

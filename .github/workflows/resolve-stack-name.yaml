@@ -1,0 +1,62 @@
+name: Resolve Stack Name
+
+# Unica fuente de verdad del nombre de los stacks efimeros. La usan
+# deploy-dev.yaml para crearlos y cleanup-dev.yaml para borrarlos; si la regla
+# viviera duplicada en ambos, cualquier cambio dejaria stacks huerfanos.
+
+on:
+  workflow_call:
+    inputs:
+      APP_NAME:
+        description: Prefijo de los stacks efimeros.
+        required: true
+        type: string
+      BRANCH_NAME:
+        description: Rama de la que se deriva el nombre. Vacia si se pasa STACK_NAME.
+        required: false
+        type: string
+        default: ''
+      STACK_NAME:
+        description: Nombre explicito. Si viene, se devuelve tal cual sin calcular nada.
+        required: false
+        type: string
+        default: ''
+    outputs:
+      STACK_NAME:
+        description: Nombre del stack, o cadena vacia si no se pudo determinar.
+        value: ${{ jobs.resolve.outputs.STACK_NAME }}
+
+jobs:
+  resolve:
+    name: Resolve
+    runs-on: ubuntu-latest
+    outputs:
+      STACK_NAME: ${{ steps.resolve.outputs.STACK_NAME }}
+    steps:
+      - id: resolve
+        env:
+          APP_NAME: ${{ inputs.APP_NAME }}
+          BRANCH_NAME: ${{ inputs.BRANCH_NAME }}
+          INPUT_STACK_NAME: ${{ inputs.STACK_NAME }}
+        run: |
+          if [ -n "$INPUT_STACK_NAME" ]; then
+            # Nombre explicito: stacks fijos (secrets-dev) o ejecucion manual.
+            STACK_NAME="$INPUT_STACK_NAME"
+          elif [ -z "$BRANCH_NAME" ]; then
+            echo "Sin rama ni nombre explicito; no hay stack que resolver."
+            STACK_NAME=""
+          elif [ "${BRANCH_NAME#dependabot/}" != "$BRANCH_NAME" ]; then
+            # Todas las ramas de dependabot comparten un mismo stack.
+            STACK_NAME="${APP_NAME}-dependabot"
+          else
+            # minusculas, sin caracteres especiales, recortado a 9 caracteres
+            SLUG=$(echo "$BRANCH_NAME" \
+              | tr '[:upper:]' '[:lower:]' \
+              | sed 's/[^a-z0-9]/-/g' \
+              | cut -c1-9 \
+              | sed 's/-*$//')
+            STACK_NAME="${APP_NAME}-${SLUG}"
+          fi
+
+          echo "STACK_NAME=$STACK_NAME" >> $GITHUB_OUTPUT
+          echo "* Stack: \`${STACK_NAME:-(ninguno)}\`" >> $GITHUB_STEP_SUMMARY

@@ -136,7 +136,14 @@ Resources:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
               StringLike:
-                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOrg}/${RepositoryName}:${SubjectPattern}
+                # GitHub emite el claim "sub" en dos formatos:
+                #   repo:joadva/demo:environment:dev                        (clasico)
+                #   repo:joadva@43792106/demo@1354277589:environment:dev    (con ids
+                #   numericos, para que la identidad sobreviva a un rename)
+                # Una lista en StringLike se evalua como OR, asi que se aceptan ambos.
+                token.actions.githubusercontent.com:sub:
+                  - !Sub repo:${GitHubOrg}/${RepositoryName}:${SubjectPattern}
+                  - !Sub repo:${GitHubOrg}@*/${RepositoryName}@*:${SubjectPattern}
       Policies:
         - PolicyName: DriveDeployment
           PolicyDocument:
