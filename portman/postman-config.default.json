@@ -1,0 +1,8 @@
+"globals": {
+  "keyValueReplacements": {},
+  "stripResponseExamples": true,
+  "valueReplacements": {},
+  "rawReplacements": [],
+  "orderOfOperations": [],
+  "securityOverwrites": {}
+}

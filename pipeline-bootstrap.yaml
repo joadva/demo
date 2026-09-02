@@ -1,0 +1,194 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Recursos de CI/CD para desplegar shared-aws-secrets desde GitHub Actions.
+  Crea el OIDC provider de GitHub, el bucket de artefactos y los dos roles
+  (PipelineExecutionRole y CloudFormationExecutionRole). Despliega un stack
+  por ambiente (dev, test, prod), con CreateOIDCProvider=Yes solo en el primero.
+
+Parameters:
+  Stage:
+    Type: String
+    AllowedValues: [dev, test, prod]
+    Description: Ambiente al que corresponde este stack. Debe coincidir con el nombre del Environment en GitHub.
+
+  GitHubOrg:
+    Type: String
+    Default: joadva
+    Description: Organizacion o usuario duenio del repositorio.
+
+  RepositoryName:
+    Type: String
+    Default: demo
+    Description: Nombre del repositorio, sin la organizacion.
+
+  SubjectPattern:
+    Type: String
+    Default: '*'
+    Description: >-
+      Sufijo del claim "sub" del token de GitHub que se acepta. El default '*'
+      acepta cualquier rama y cualquier environment. Para restringir usa por
+      ejemplo "environment:dev" o "ref:refs/heads/master".
+
+  CreateOIDCProvider:
+    Type: String
+    AllowedValues: [ 'Yes', 'No' ]
+    Default: 'Yes'
+    Description: >-
+      Pon 'No' si el proveedor OIDC de GitHub ya existe en esta cuenta
+      (solo puede haber uno por cuenta).
+
+Conditions:
+  ShouldCreateOIDCProvider: !Equals [ !Ref CreateOIDCProvider, 'Yes' ]
+
+Resources:
+  GitHubOIDCProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: ShouldCreateOIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+
+  ArtifactsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub sam-artifacts-${RepositoryName}-${Stage}-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldArtifacts
+            Status: Enabled
+            ExpirationInDays: 60
+
+  # Rol que asume CloudFormation para crear los recursos del template.yaml
+  CloudFormationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub gha-${RepositoryName}-${Stage}-cfn-exec
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: DeployServerlessStack
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:*
+                  - lambda:*
+                  - apigateway:*
+                  - secretsmanager:*
+                  - logs:*
+                  - xray:*
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:ListBucket
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:GetRole
+                  - iam:TagRole
+                  - iam:UntagRole
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:GetRolePolicy
+                  - iam:PassRole
+                Resource: '*'
+
+  # Rol que asume GitHub Actions via OIDC para lanzar el despliegue.
+  PipelineExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub gha-${RepositoryName}-${Stage}-pipeline
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - ShouldCreateOIDCProvider
+                - !Ref GitHubOIDCProvider
+                - !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOrg}/${RepositoryName}:${SubjectPattern}
+      Policies:
+        - PolicyName: DriveDeployment
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              # sam deploy: crea y vigila el change set
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:GetTemplateSummary
+                  - cloudformation:ListStackResources
+                  - cloudformation:ListExports
+                  # sam delete, usado por el workflow Cleanup Dev
+                  - cloudformation:DeleteStack
+                Resource: '*'
+              # sam deploy entrega el despliegue al rol de CloudFormation
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt CloudFormationExecutionRole.Arn
+              # subida del paquete de la Lambda
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  - !GetAtt ArtifactsBucket.Arn
+                  - !Sub ${ArtifactsBucket.Arn}/*
+              # job de validaciones post-deploy (Cognito)
+              - Effect: Allow
+                Action:
+                  - cognito-idp:InitiateAuth
+                Resource: '*'
+
+Outputs:
+  PipelineExecutionRoleArn:
+    Description: Pegar en la variable PIPELINE_EXECUTION_ROLE del Environment de GitHub
+    Value: !GetAtt PipelineExecutionRole.Arn
+
+  CloudFormationExecutionRoleArn:
+    Description: Pegar en la variable CLOUDFORMATION_EXECUTION_ROLE del Environment de GitHub
+    Value: !GetAtt CloudFormationExecutionRole.Arn
+
+  ArtifactsBucketName:
+    Description: Pegar en la variable ARTIFACTS_BUCKET_NAME del Environment de GitHub
+    Value: !Ref ArtifactsBucket
