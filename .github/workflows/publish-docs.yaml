@@ -36,10 +36,10 @@ jobs:
     # Necesario para leer vars.PIPELINE_EXECUTION_ROLE.
     environment: dev
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-region: us-east-1
           role-to-assume: ${{ vars.PIPELINE_EXECUTION_ROLE }}
@@ -89,7 +89,7 @@ jobs:
 
           yq '.servers' _site/openapi.yaml
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 

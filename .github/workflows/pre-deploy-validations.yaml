@@ -14,10 +14,10 @@ jobs:
     outputs:
       BRANCH_NAME: ${{ steps.branch-name-step.outputs.BRANCH_NAME }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Cache npm
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.npm
@@ -26,12 +26,12 @@ jobs:
 
       - name: Cache src
         id: cache-src
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: src
           key: src-${{ hashFiles('src/**') }}
 
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         id: changes
         with:
           filters: |
