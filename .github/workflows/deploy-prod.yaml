@@ -1,9 +1,14 @@
 name: Deploy Prod
 
 on:
-  push:
-    branches:
-      - master
+  # Manual mientras el Environment "prod" no tenga configuradas sus variables
+  # (PIPELINE_EXECUTION_ROLE, CLOUDFORMATION_EXECUTION_ROLE, ARTIFACTS_BUCKET_NAME)
+  # ni sus secrets DB_*. Sin ellas el despliegue falla al asumir el rol.
+  # Para volver a automatico: descomentar el bloque push de abajo.
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - master
 
 concurrency:
   group: ${{ github.workflow }}
