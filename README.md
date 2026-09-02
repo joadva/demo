@@ -106,7 +106,7 @@ Pull requests and issues are welcome. Please follow the coding standards and ens
 
 For questions or support, contact:
 
-- Adrian Valentin (@javalentinr)
+- Adrian Valentin (@javalentin)
 
 ## License
 
