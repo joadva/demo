@@ -1,0 +1,208 @@
+{
+  "version": 1,
+  "tests": {
+    "contractTests": [
+      {
+        "openApiOperation": "*::/*",
+        "statusSuccess": {
+          "enabled": true
+        }
+      },
+      {
+        "openApiOperation": "*::/*",
+        "responseTime": {
+          "enabled": false,
+          "maxMs": 1500
+        }
+      },
+      {
+        "openApiOperation": "*::/*",
+        "contentType": {
+          "enabled": true
+        }
+      },
+      {
+        "openApiOperation": "*::/*",
+        "jsonBody": {
+          "enabled": true
+        }
+      },
+      {
+        "openApiOperation": "*::/*",
+        "schemaValidation": {
+          "enabled": true
+        }
+      },
+      {
+        "openApiOperation": "*::/*",
+        "headersPresent": {
+          "enabled": true
+        }
+      }
+    ],
+    "contentTests": [],
+    "extendTests": [],
+    "variationTests": [
+      {
+        "openApiOperation": "*::/*",
+        "openApiResponse": "400",
+        "variations": [
+          {
+            "name": "Bad Request",
+            "fuzzing": [
+              {
+                "requestBody": [
+                  {
+                    "requiredFields": {
+                      "enabled": true
+                    },
+                    "minimumNumberFields": {
+                      "enabled": true
+                    },
+                    "maximumNumberFields": {
+                      "enabled": true
+                    },
+                    "minLengthFields": {
+                      "enabled": true
+                    },
+                    "maxLengthFields": {
+                      "enabled": true
+                    }
+                  }
+                ]
+              }
+            ],
+            "tests": {
+              "contractTests": [
+                {
+                  "statusCode": {
+                    "enabled": true
+                  },
+                  "contentType": {
+                    "enabled": true
+                  },
+                  "jsonBody": {
+                    "enabled": true
+                  },
+                  "schemaValidation": {
+                    "enabled": true
+                  },
+                  "headersPresent": {
+                    "enabled": true
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "openApiOperation": "GET::/clientes/{clientId}/referencias",
+        "openApiResponse": "404",
+        "variations": [
+          {
+            "name": "Not Found",
+            "tests": {
+              "contractTests": [
+                {
+                  "statusCode": {
+                    "enabled": true
+                  },
+                  "contentType": {
+                    "enabled": true
+                  },
+                  "jsonBody": {
+                    "enabled": true
+                  },
+                  "schemaValidation": {
+                    "enabled": true
+                  },
+                  "headersPresent": {
+                    "enabled": true
+                  }
+                }
+              ]
+            },
+            "overwrites": [
+              {
+                "overwriteRequestPathVariables": [
+                  {
+                    "key": "clientId",
+                    "value": "0",
+                    "overwrite": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "openApiOperation": "GET::/prospectos/{prospectId}/referencias",
+        "openApiResponse": "404",
+        "variations": [
+          {
+            "name": "Not Found",
+            "tests": {
+              "contractTests": [
+                {
+                  "statusCode": {
+                    "enabled": true
+                  },
+                  "contentType": {
+                    "enabled": true
+                  },
+                  "jsonBody": {
+                    "enabled": true
+                  },
+                  "schemaValidation": {
+                    "enabled": true
+                  },
+                  "headersPresent": {
+                    "enabled": true
+                  }
+                }
+              ]
+            },
+            "overwrites": [
+              {
+                "overwriteRequestPathVariables": [
+                  {
+                    "key":"prospectId",
+                    "value": "0",
+                    "overwrite": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "assignVariables": [],
+  "overwrites": [
+    {
+      "openApiOperationIds": [
+        "getClientReferences"
+      ],
+      "overwriteRequestPathVariables": [
+        {
+          "key": "clientId",
+          "value": "1369",
+          "overwrite": true
+        }
+      ]
+    }
+  ],
+  "operationPreRequestScripts": [],
+  "globals": {
+    "keyValueReplacements": {},
+    "stripResponseExamples": true,
+    "valueReplacements": {},
+    "rawReplacements": [],
+    "orderOfOperations": [],
+    "securityOverwrites": {
+    }
+  }
+}

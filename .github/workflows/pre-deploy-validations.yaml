@@ -1,0 +1,65 @@
+name: Pre-deploy Validations
+
+on:
+  workflow_call:
+    outputs:
+      BRANCH_NAME:
+        description: Name of the branch that will be deployed
+        value: ${{ jobs.pre-deploy-validations.outputs.BRANCH_NAME }}
+
+jobs:
+  pre-deploy-validations:
+    name: Pre-deploy Validations
+    runs-on: ubuntu-latest
+    outputs:
+      BRANCH_NAME: ${{ steps.branch-name-step.outputs.BRANCH_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache npm
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.npm
+            node_modules
+          key: npm-${{ hashFiles('package-lock.json', 'package.json') }}
+
+      - name: Cache src
+        id: cache-src
+        uses: actions/cache@v3
+        with:
+          path: src
+          key: src-${{ hashFiles('src/**') }}
+
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            openapi:
+              - 'openapi.yaml'
+
+      - name: Lint OpenAPI
+        if: ${{ steps.changes.outputs.openapi == 'true' }}
+        run: |
+          npm install -g @stoplight/spectral-cli
+          spectral lint ./openapi.yaml
+
+      - name: Lint JS
+        if: ${{ steps.cache-src.outputs.cache-hit != 'true' }}
+        run: |
+          npm ci
+          npm run lint
+
+      - name: Run Unit Tests & Code Coverage
+        if: ${{ steps.cache-src.outputs.cache-hit != 'true' }}
+        run: |
+          npm ci
+          npm run coverage
+
+      - name: Set the branch name to be used as input
+        id: branch-name-step
+        run: |
+          branchName=${{ github.event_name == 'workflow_dispatch' && github.ref_name || github.event_name == 'pull_request' && github.head_ref }}
+          echo "BRANCH_NAME=$branchName" >> $GITHUB_OUTPUT
+          echo "# Branch Name " >> $GITHUB_STEP_SUMMARY
+          echo "* $branchName " >> $GITHUB_STEP_SUMMARY

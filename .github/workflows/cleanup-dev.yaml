@@ -1,0 +1,111 @@
+name: Cleanup Dev
+
+on:
+  delete:
+  pull_request:
+    types:
+      - closed
+  workflow_dispatch:
+    inputs:
+      STACK_NAME:
+        description: Stack a eliminar. Si se deja vacio se calcula desde la rama.
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      STACK_NAME:
+        description: Stack a eliminar. Si se deja vacio se calcula desde la rama.
+        required: false
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: read
+
+env:
+  APP_NAME: demo-secrets
+  AWS_REGION: us-east-1
+
+jobs:
+  get-stack-name:
+    name: Resolve Stack Name
+    runs-on: ubuntu-latest
+    # El evento delete tambien dispara al borrar etiquetas; solo interesan ramas.
+    if: ${{ github.event_name != 'delete' || github.event.ref_type == 'branch' }}
+    outputs:
+      STACK_NAME: ${{ steps.resolve.outputs.STACK_NAME }}
+    steps:
+      - name: Resolve stack name
+        id: resolve
+        env:
+          INPUT_STACK_NAME: ${{ inputs.STACK_NAME }}
+          BRANCH_NAME: ${{ github.event_name == 'pull_request' && github.head_ref || github.event_name == 'delete' && github.event.ref || github.ref_name }}
+        run: |
+          if [ -n "$INPUT_STACK_NAME" ]; then
+            STACK_NAME="$INPUT_STACK_NAME"
+          elif [ -z "$BRANCH_NAME" ]; then
+            echo "No se pudo determinar la rama; no hay nada que limpiar."
+            echo "STACK_NAME=" >> $GITHUB_OUTPUT
+            exit 0
+          elif [ "${BRANCH_NAME#dependabot/}" != "$BRANCH_NAME" ]; then
+            # Todas las ramas de dependabot comparten un mismo stack.
+            STACK_NAME="${APP_NAME}-dependabot"
+          else
+            # minusculas, sin caracteres especiales, recortado a 9 caracteres
+            SLUG=$(echo "$BRANCH_NAME" \
+              | tr '[:upper:]' '[:lower:]' \
+              | sed 's/[^a-z0-9]/-/g' \
+              | cut -c1-9 \
+              | sed 's/-*$//')
+            STACK_NAME="${APP_NAME}-${SLUG}"
+          fi
+
+          # Salvaguarda: los stacks fijos de cada ambiente nunca se borran aqui.
+          case "$STACK_NAME" in
+            secrets-dev|secrets-test|secrets-prod)
+              echo "::error::Rechazado: $STACK_NAME es el stack fijo de un ambiente, no un stack efimero."
+              exit 1
+              ;;
+          esac
+
+          echo "STACK_NAME=$STACK_NAME" >> $GITHUB_OUTPUT
+          echo "# Cleanup" >> $GITHUB_STEP_SUMMARY
+          echo "* Stack a eliminar: \`$STACK_NAME\`" >> $GITHUB_STEP_SUMMARY
+
+  cleanup-resources:
+    name: Cleanup Resources
+    needs: [get-stack-name]
+    if: ${{ needs.get-stack-name.outputs.STACK_NAME != '' }}
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.PIPELINE_EXECUTION_ROLE }}
+          role-session-name: demo-cleanup
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+
+      - name: Delete stack
+        env:
+          STACK_NAME: ${{ needs.get-stack-name.outputs.STACK_NAME }}
+        run: |
+          # sam delete truena si el stack no existe, y eso pasa seguido:
+          # ramas que nunca desplegaron, o limpiezas repetidas.
+          if ! aws cloudformation describe-stacks --stack-name "$STACK_NAME" >/dev/null 2>&1; then
+            echo "El stack $STACK_NAME no existe; nada que borrar."
+            echo "* El stack \`$STACK_NAME\` no existia." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          sam delete \
+            --stack-name "$STACK_NAME" \
+            --region "$AWS_REGION" \
+            --no-prompts
+
+          echo "* Stack \`$STACK_NAME\` eliminado." >> $GITHUB_STEP_SUMMARY

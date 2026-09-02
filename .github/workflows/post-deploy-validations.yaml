@@ -1,0 +1,48 @@
+name: Post-deploy Validations
+
+on:
+  workflow_call:
+    inputs:
+      ENVIRONMENT:
+        required: true
+        type: string
+      BASE_URL:
+        description: Base URL of the API that was just deployed
+        required: true
+        type: string
+
+jobs:
+  portman:
+    name: Run Portman
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.ENVIRONMENT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache npm
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.npm
+            node_modules
+          key: npm-${{ hashFiles('package-lock.json', 'package.json') }}
+
+      # La API no tiene authorizer, asi que Portman corre sin token.
+      # Si mas adelante se agrega un authorizer de Cognito, hay que volver a
+      # configurar credenciales de AWS aqui y generar ./portman/.env-portman
+      # con PORTMAN_BEARER_TOKEN antes de este paso.
+      - name: Test API
+        run: |
+          npm ci
+
+          echo "### Postman / Portman Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          npx @apideck/portman --cliOptionsFile ./portman/portman-cli.json --baseUrl ${{ inputs.BASE_URL }}
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ success() || failure() }}
+        with:
+          name: collection.postman.json
+          path: collection.postman.json
+          if-no-files-found: ignore

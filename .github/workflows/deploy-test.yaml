@@ -1,0 +1,41 @@
+name: Deploy Test
+run-name: Deploy ${{ github.event_name == 'workflow_dispatch' && github.ref_name || github.event_name == 'pull_request' && github.head_ref }} to Test
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || github.event_name == 'pull_request' && github.head_ref }}
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ENVIRONMENT: test
+  BRANCH_NAME: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || github.event_name == 'pull_request' && github.head_ref }}
+  APP_NAME: demo-secrets
+
+jobs:
+  pre-deploy-validations:
+    name: Pre-Deployment
+    uses: ./.github/workflows/pre-deploy-validations.yaml
+
+  deploy-api:
+    name: API Deployment
+    needs: [pre-deploy-validations]
+    uses: ./.github/workflows/shared-deploy-api.yaml
+    with:
+      ENVIRONMENT: test
+      AWS_REGION: us-east-1
+      STACK_NAME: secrets-test
+    secrets: inherit
+
+  post-deploy-validations:
+    name: Post-Deployment
+    needs: [deploy-api]
+    uses: ./.github/workflows/post-deploy-validations.yaml
+    with:
+      ENVIRONMENT: test
+      BASE_URL: ${{ needs.deploy-api.outputs.API_BASE_URL }}
+    secrets: inherit

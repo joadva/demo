@@ -1,0 +1,17 @@
+version: 0.1
+default:
+  build:
+    parameters:
+      cached: 'true'
+      parallel: 'true'
+  deploy:
+    parameters:
+      stack_name: {{StackName}}
+      capabilities: CAPABILITY_IAM
+      parameter_overrides:
+        - 'DBHost={{DBHost}}'
+        - 'DBUser={{DBUser}}'
+        - 'DBPassword={{DBPassword}}'
+        - 'DBPort={{DBPort}}'
+        - 'DBDatabase={{DBDatabase}}'
+      image_repositories: []

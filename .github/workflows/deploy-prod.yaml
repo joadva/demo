@@ -1,0 +1,33 @@
+name: Deploy Prod
+
+on:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ENVIRONMENT: prod
+  BRANCH_NAME: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || github.event_name == 'pull_request' && github.head_ref }}
+  APP_NAME: demo-secrets
+
+jobs:
+  pre-deploy-validations:
+    name: Pre-Deployment
+    uses: ./.github/workflows/pre-deploy-validations.yaml
+
+  deploy-api:
+    name: API Deployment
+    needs: [pre-deploy-validations]
+    uses: ./.github/workflows/shared-deploy-api.yaml
+    with:
+      ENVIRONMENT: prod
+      AWS_REGION: us-east-1
+      STACK_NAME: secrets-prod
+    secrets: inherit

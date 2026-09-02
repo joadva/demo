@@ -1,0 +1,9 @@
+{
+    "exclude": "src/**/tests/*.mjs",
+    "reporter": [
+      "text",
+      "clover",
+      "html"
+    ],
+    "reports-dir": "docs/coverage"
+}

@@ -1,0 +1,70 @@
+name: Deploy Dev
+run-name: Deploy ${{ github.event_name == 'workflow_dispatch' && github.ref_name || github.event_name == 'pull_request' && github.head_ref }} to Dev
+
+on:
+  push:
+    branches:
+      - dev
+
+concurrency:
+  group: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || github.event_name == 'pull_request' && github.head_ref }}
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: read
+
+env:
+  ENVIRONMENT: dev
+  BRANCH_NAME: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || github.event_name == 'pull_request' && github.head_ref }}
+  APP_NAME: demo-secrets
+
+jobs:
+  pre-deploy-validations:
+    name: Pre-Deployment
+    uses: ./.github/workflows/pre-deploy-validations.yaml
+
+  deploy-api:
+    name: API Deployment
+    needs: [pre-deploy-validations]
+    uses: ./.github/workflows/shared-deploy-api.yaml
+    with:
+      ENVIRONMENT: dev
+      AWS_REGION: us-east-1
+      STACK_NAME: secrets-dev
+    secrets: inherit
+
+  post-deploy-validations:
+    name: Post-Deployment
+    needs: [deploy-api]
+    uses: ./.github/workflows/post-deploy-validations.yaml
+    with:
+      ENVIRONMENT: dev
+      BASE_URL: ${{ needs.deploy-api.outputs.API_BASE_URL }}
+    secrets: inherit
+
+  auto-merge-dependabot-update:
+    name: Auto Merge Dependabot Update
+    needs: [post-deploy-validations]
+    if: ${{ github.actor == 'dependabot[bot]' && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - name: Dependabot metadata
+        id: dependabot-metadata
+        uses: dependabot/fetch-metadata@v1
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Approve a PR if not already approved
+        if: ${{ steps.dependabot-metadata.outputs.update-type == 'version-update:semver-minor' || steps.dependabot-metadata.outputs.update-type == 'version-update:semver-patch' || steps.dependabot-metadata.outputs.package-ecosystem == 'github_actions' }}
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr checkout "$PR_URL" # sets the upstream metadata for `gh pr status`
+          gh pr review --approve "$PR_URL"
+          gh pr merge --auto --merge "$PR_URL"

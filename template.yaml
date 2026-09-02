@@ -1,0 +1,310 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: demo-management-service
+Transform:
+  - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
+
+Parameters:
+  DBHost:
+    Type: String
+    NoEcho: true
+  DBUser:
+    Type: String
+    NoEcho: true
+  DBPassword:
+    Type: String
+    NoEcho: true
+  DBPort:
+    Type: String
+  DBDatabase:
+    Type: String
+    NoEcho: true
+
+Globals:
+  Function:
+    Tracing: Active
+    Timeout: 10
+    Runtime: nodejs20.x
+    MemorySize: 128
+    Architectures:
+      - arm64
+  Api:
+   Cors:
+     AllowMethods: "'DELETE,GET,OPTIONS,PATCH,POST,PUT'"
+     AllowHeaders: "'Content-Type,Authorization'"
+     AllowOrigin: "'*'"
+
+Resources:
+  # Alternativa con Secrets Manager. Desactivada porque cobra ~0.40 USD por
+  # secreto al mes solo por existir, aunque nunca se consulte. Hoy las
+  # credenciales viajan como variables de entorno de cada funcion.
+  #
+  # Para volver a ella hay que hacer cuatro cosas:
+  #   1. Descomentar este recurso y el output DatabaseConnectionSecretArn.
+  #   2. En cada funcion, cambiar las cinco variables DB_* por
+  #      DATABASE_CONNECTION_SECRET: !Ref DatabaseConnectionSecret
+  #   3. En cada funcion, devolver el permiso sobre el secreto:
+  #        - Version: 2012-10-17
+  #          Statement:
+  #            - Effect: Allow
+  #              Action:
+  #                - secretsmanager:GetSecretValue
+  #              Resource:
+  #                - !Ref DatabaseConnectionSecret
+  #   4. En src/shared/database/index.mjs, leer las credenciales con
+  #      getSecret(process.env.DATABASE_CONNECTION_SECRET, { transform: 'json' })
+  #      en lugar de process.env.
+  #
+  # DatabaseConnectionSecret:
+  #   Type: AWS::SecretsManager::Secret
+  #   DeletionPolicy: Delete
+  #   UpdateReplacePolicy: Delete
+  #   Properties:
+  #     Description: Database connection variables
+  #     SecretString:
+  #       Fn::ToJsonString:
+  #         connectionDetails:
+  #           host: !Ref DBHost
+  #           user: !Ref DBUser
+  #           password: !Ref DBPassword
+  #           port: !Ref DBPort
+  #           database: !Ref DBDatabase
+
+  API:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: api
+      DefinitionBody:
+        Fn::Transform:
+          Name: AWS::Include
+          Parameters:
+            Location: ./openapi.yaml
+
+  StatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/status
+      Handler: index.handler
+      Timeout: 30
+      Events:
+        EchoEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref API
+            Path: /status
+            Method: GET
+      Environment:
+        Variables:
+          DB_HOST: !Ref DBHost
+          DB_USER: !Ref DBUser
+          DB_PASSWORD: !Ref DBPassword
+          DB_PORT: !Ref DBPort
+          DB_DATABASE: !Ref DBDatabase
+      Policies:
+        - AWSLambdaBasicExecutionRole
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: esm
+        Minify: false
+        OutExtension:
+          - .js=.mjs
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - index.mjs
+        Banner:
+          - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+
+  ListClientesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/clientes/list
+      Handler: index.handler
+      Timeout: 30
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref API
+            Path: /clientes
+            Method: GET
+      Environment:
+        Variables:
+          DB_HOST: !Ref DBHost
+          DB_USER: !Ref DBUser
+          DB_PASSWORD: !Ref DBPassword
+          DB_PORT: !Ref DBPort
+          DB_DATABASE: !Ref DBDatabase
+      Policies:
+        - AWSLambdaBasicExecutionRole
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: esm
+        Minify: false
+        OutExtension:
+          - .js=.mjs
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - index.mjs
+        Banner:
+          - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+
+  GetClienteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/clientes/get
+      Handler: index.handler
+      Timeout: 30
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref API
+            Path: /clientes/{clienteId}
+            Method: GET
+      Environment:
+        Variables:
+          DB_HOST: !Ref DBHost
+          DB_USER: !Ref DBUser
+          DB_PASSWORD: !Ref DBPassword
+          DB_PORT: !Ref DBPort
+          DB_DATABASE: !Ref DBDatabase
+      Policies:
+        - AWSLambdaBasicExecutionRole
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: esm
+        Minify: false
+        OutExtension:
+          - .js=.mjs
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - index.mjs
+        Banner:
+          - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+
+  CreateClienteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/clientes/create
+      Handler: index.handler
+      Timeout: 30
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref API
+            Path: /clientes
+            Method: POST
+      Environment:
+        Variables:
+          DB_HOST: !Ref DBHost
+          DB_USER: !Ref DBUser
+          DB_PASSWORD: !Ref DBPassword
+          DB_PORT: !Ref DBPort
+          DB_DATABASE: !Ref DBDatabase
+      Policies:
+        - AWSLambdaBasicExecutionRole
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: esm
+        Minify: false
+        OutExtension:
+          - .js=.mjs
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - index.mjs
+        Banner:
+          - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+
+  UpdateClienteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/clientes/update
+      Handler: index.handler
+      Timeout: 30
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref API
+            Path: /clientes/{clienteId}
+            Method: PUT
+      Environment:
+        Variables:
+          DB_HOST: !Ref DBHost
+          DB_USER: !Ref DBUser
+          DB_PASSWORD: !Ref DBPassword
+          DB_PORT: !Ref DBPort
+          DB_DATABASE: !Ref DBDatabase
+      Policies:
+        - AWSLambdaBasicExecutionRole
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: esm
+        Minify: false
+        OutExtension:
+          - .js=.mjs
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - index.mjs
+        Banner:
+          - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+
+  DeleteClienteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/clientes/delete
+      Handler: index.handler
+      Timeout: 30
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref API
+            Path: /clientes/{clienteId}
+            Method: DELETE
+      Environment:
+        Variables:
+          DB_HOST: !Ref DBHost
+          DB_USER: !Ref DBUser
+          DB_PASSWORD: !Ref DBPassword
+          DB_PORT: !Ref DBPort
+          DB_DATABASE: !Ref DBDatabase
+      Policies:
+        - AWSLambdaBasicExecutionRole
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: esm
+        Minify: false
+        OutExtension:
+          - .js=.mjs
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - index.mjs
+        Banner:
+          - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+
+Outputs:
+  ApiURL:
+    Description: API URL
+    Value: !Sub https://${API}.execute-api.${AWS::Region}.amazonaws.com/api
+
+  # Ver la nota del recurso DatabaseConnectionSecret en la seccion Resources.
+  #
+  # DatabaseConnectionSecretArn:
+  #   Description: ARN of the DatabaseConnectionSecret
+  #   Value: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${DatabaseConnectionSecret}
+  #   Export:
+  #     Name: !Sub "DatabaseConnectionSecretArn-${AWS::StackName}"

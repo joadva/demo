@@ -1,0 +1,106 @@
+name: Deploy API
+
+on:
+  workflow_call:
+    inputs:
+      ENVIRONMENT:
+        required: true
+        type: string
+      AWS_REGION:
+        description: AWS Region the stack is being deployed to
+        required: true
+        type: string
+      STACK_NAME:
+        type: string
+        default: demo-back
+    outputs:
+      API_BASE_URL:
+        description: Base URL for the API that got deployed
+        value: ${{ jobs.build-and-deploy.outputs.API_BASE_URL }}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy SAM Application
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.ENVIRONMENT }}
+    outputs:
+      API_BASE_URL: ${{ steps.getStackOutputs.outputs.API_BASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ inputs.AWS_REGION }}
+          role-to-assume: ${{ vars.PIPELINE_EXECUTION_ROLE }}
+          role-session-name: demo-deploy
+          role-duration-seconds: 3600
+          role-skip-session-tagging: true
+      
+      - name: Cache npm
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.npm
+            node_modules
+          key: npm-${{ hashFiles('package-lock.json', 'package.json') }}
+
+      # Instalar dependencias
+      - name: Install dependencies
+        run: |
+          if ! command -v esbuild >/dev/null 2>&1; then
+            npm install -g esbuild
+          fi
+          if ! command -v replace-in-files-cli >/dev/null 2>&1; then
+            npm install -g replace-in-files-cli
+          fi
+          npm ci
+      
+      # Cache para SAM build
+      - name: Cache SAM Build
+        id: cache-sam-build 
+        uses: actions/cache@v3
+        with:
+          path: .aws-sam/build
+          key: sam-build-${{ hashFiles('package.json', 'template.yaml', 'openapi.yaml', 'samconfig.ci.yaml', 'src/**') }}
+    
+      - name: Replace Variables in samconfig
+        run: |
+          replace-in-files --string='{{StackName}}' --replacement='${{ inputs.STACK_NAME }}' ./samconfig.ci.yaml
+          replace-in-files --string='{{DBHost}}' --replacement='${{ secrets.DB_HOST }}' ./samconfig.ci.yaml
+          replace-in-files --string='{{DBUser}}' --replacement='${{ secrets.DB_USER }}' ./samconfig.ci.yaml
+          replace-in-files --string='{{DBPassword}}' --replacement='${{ secrets.DB_PASSWORD }}' ./samconfig.ci.yaml
+          replace-in-files --string='{{DBPort}}' --replacement='${{ secrets.DB_PORT }}' ./samconfig.ci.yaml
+          replace-in-files --string='{{DBDatabase}}' --replacement='${{ secrets.DB_DATABASE }}' ./samconfig.ci.yaml
+
+      - name: SAM Build
+        if: ${{ steps.cache-sam-build.outputs.cache-hit != 'true' }}
+        run: |
+          sam --info
+
+          sam validate --lint
+
+          sam build \
+          --config-file samconfig.ci.yaml
+
+      - name: SAM Deploy
+        run: |
+          sam deploy \
+          --config-file samconfig.ci.yaml \
+          --s3-bucket ${{ vars.ARTIFACTS_BUCKET_NAME }} \
+          --no-fail-on-empty-changeset \
+          --role-arn ${{ vars.CLOUDFORMATION_EXECUTION_ROLE }}
+
+      - id: getStackOutputs
+        name: Get Stack Outputs
+        run: |
+          url=$(aws cloudformation describe-stacks --stack-name ${{ inputs.STACK_NAME }} --query "Stacks[0].Outputs[?OutputKey=='ApiURL'].OutputValue" --output text)
+
+          echo "# API" >> $GITHUB_STEP_SUMMARY
+          echo "* API: $url" >> $GITHUB_STEP_SUMMARY
+
+          echo "API_BASE_URL=$url" >> $GITHUB_OUTPUT
