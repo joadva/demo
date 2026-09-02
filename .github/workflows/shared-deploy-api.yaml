@@ -31,9 +31,9 @@ jobs:
       API_BASE_URL: ${{ steps.getStackOutputs.outputs.API_BASE_URL }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-region: ${{ inputs.AWS_REGION }}
           role-to-assume: ${{ vars.PIPELINE_EXECUTION_ROLE }}
@@ -42,7 +42,7 @@ jobs:
           role-skip-session-tagging: true
       
       - name: Cache npm
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.npm
@@ -63,7 +63,7 @@ jobs:
       # Cache para SAM build
       - name: Cache SAM Build
         id: cache-sam-build 
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .aws-sam/build
           key: sam-build-${{ hashFiles('package.json', 'template.yaml', 'openapi.yaml', 'samconfig.ci.yaml', 'src/**') }}
