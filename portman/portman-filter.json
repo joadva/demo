@@ -1,8 +1,9 @@
 {
   "operationIds": [
-    "ping",
-    "info",
-    "echo",
-    "status"
+    "listClientes",
+    "createCliente",
+    "getCliente",
+    "updateCliente",
+    "deleteCliente"
   ]
 }
