@@ -100,6 +100,13 @@ jobs:
         run: |
           url=$(aws cloudformation describe-stacks --stack-name ${{ inputs.STACK_NAME }} --query "Stacks[0].Outputs[?OutputKey=='ApiURL'].OutputValue" --output text)
 
+          # Sin esta guarda, un ApiURL vacio se propaga hasta Portman, que
+          # entonces cae al servers del contrato y falla con un DNS confuso.
+          if [ -z "$url" ] || [ "$url" = "None" ]; then
+            echo "::error::El stack ${{ inputs.STACK_NAME }} no expuso el output ApiURL."
+            exit 1
+          fi
+
           echo "# API" >> $GITHUB_STEP_SUMMARY
           echo "* API: $url" >> $GITHUB_STEP_SUMMARY
 
