@@ -21,10 +21,10 @@ jobs:
     # que ya salio bien. Quitar esta linea cuando la base de datos este conectada.
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Cache npm
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.npm
@@ -44,7 +44,7 @@ jobs:
 
           npx @apideck/portman --cliOptionsFile ./portman/portman-cli.json --baseUrl ${{ inputs.BASE_URL }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ success() || failure() }}
         with:
           name: collection.postman.json
