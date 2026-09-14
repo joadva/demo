@@ -41,13 +41,12 @@ jobs:
           role-duration-seconds: 3600
           role-skip-session-tagging: true
       
-      - name: Cache npm
-        uses: actions/cache@v4
+      # Misma version que el runtime de las Lambdas (nodejs24.x). middy 7 y
+      # vitest 5 exigen Node >= 22; no conviene depender de la del runner.
+      - uses: actions/setup-node@v4
         with:
-          path: |
-            ~/.npm
-            node_modules
-          key: npm-${{ hashFiles('package-lock.json', 'package.json') }}
+          node-version: 24
+          cache: npm
 
       # Instalar dependencias
       - name: Install dependencies

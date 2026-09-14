@@ -33,13 +33,12 @@ jobs:
         with:
           name: aws-exports-${{ inputs.STACK_NAME }}
 
-      - name: Cache npm
-        uses: actions/cache@v4
+      # Misma version que el runtime de las Lambdas (nodejs24.x). middy 7 y
+      # vitest 5 exigen Node >= 22; no conviene depender de la del runner.
+      - uses: actions/setup-node@v4
         with:
-          path: |
-            ~/.npm
-            node_modules
-          key: npm-${{ hashFiles('package-lock.json', 'package.json') }}
+          node-version: 24
+          cache: npm
 
       # La API no tiene authorizer, asi que Portman corre sin token.
       # Si mas adelante se agrega un authorizer de Cognito, hay que volver a

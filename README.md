@@ -26,26 +26,32 @@ This project is the backend for the mobile client application. It handles all bu
 
 ### Main dependencies and versions
 
-| Package                                 | Version    |
-|------------------------------------------|------------|
-| @aws-lambda-powertools/logger           | ^2.0.0     |
-| @aws-lambda-powertools/metrics          | ^2.0.0     |
-| @aws-lambda-powertools/parameters       | ^2.0.0     |
-| @aws-lambda-powertools/tracer           | ^2.0.0     |
-| @aws-sdk/client-secrets-manager         | ^3.855.0   |
-| @middy/core                             | ^5.2.4     |
-| googleapis                              | ^140.0.1   |
-| mysql2                                  | ^3.14.2    |
-| @stoplight/spectral-cli                 | ^6.10.1    |
-| @vitest/coverage-v8                     | ^1.3.1     |
-| aws-sdk-client-mock                     | ^3.0.0     |
-| axios                                   | ^1.6.7     |
-| c8                                      | ^9.1.0     |
-| crypto                                  | ^1.0.1     |
-| eslint                                  | ^8.48.0    |
-| eslint-config-google                    | ^0.14.0    |
-| jsonwebtoken                            | ^9.0.2     |
-| vitest                                  | ^1.3.1     |
+Runtime (se empaquetan en las Lambdas):
+
+| Package                           | Version    |
+|-----------------------------------|------------|
+| @aws-lambda-powertools/logger     | ^2.35.0    |
+| @aws-lambda-powertools/metrics    | ^2.35.0    |
+| @aws-lambda-powertools/parameters | ^2.35.0    |
+| @aws-lambda-powertools/tracer     | ^2.35.0    |
+| @aws-sdk/client-secrets-manager   | ^3.1132.0  |
+| @middy/core                       | ^7.9.2     |
+| mysql2                            | ^3.24.4    |
+
+Desarrollo:
+
+| Package                  | Version    |
+|--------------------------|------------|
+| eslint                   | ^10.10.0   |
+| @eslint/js               | ^10.0.1    |
+| @stylistic/eslint-plugin | ^5.10.0    |
+| globals                  | ^17.12.0   |
+| vitest                   | ^5.0.0     |
+| @vitest/coverage-v8      | ^5.0.0     |
+| @stoplight/spectral-cli  | ^6.16.3    |
+| axios                    | ^1.20.0    |
+
+Requiere Node >= 22 (`engines` en package.json). El runtime de las Lambdas es `nodejs24.x` y CI usa Node 24.
 
 ## Folder Structure Diagram
 
@@ -80,11 +86,14 @@ BackendAppMovilClientes/
    ```
 2. **Run tests:**
    ```bash
-   npm test
+   npm test            # una sola corrida
+   npm run test:watch  # modo interactivo
+   npm run coverage    # con cobertura, reporte en docs/coverage
    ```
 3. **Lint code:**
    ```bash
-   npm run lint
+   npm run lint        # ESLint (configuracion plana en eslint.config.mjs)
+   npm run lint-api    # Spectral sobre openapi.yaml
    ```
 4. **API documentation:**
    Open `openapi.yaml` with an OpenAPI viewer or use Spectral for linting.
