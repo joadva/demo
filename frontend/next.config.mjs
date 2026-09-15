@@ -6,6 +6,9 @@ const nextConfig = {
   // desde el navegador. Se puede publicar en S3, GitHub Pages o Amplify.
   output: 'export',
   trailingSlash: true,
+  // En GitHub Pages de proyecto el sitio cuelga de /<repo>/; el workflow lo
+  // pasa en NEXT_PUBLIC_BASE_PATH. En local queda vacio.
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
   // El backend tiene su propio package-lock.json un nivel arriba; sin esto
   // Turbopack lo toma como raiz del workspace.
   turbopack: {

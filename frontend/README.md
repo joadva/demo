@@ -1,31 +1,34 @@
 # Frontend de ejemplo (Next)
 
-Muestra cómo un frontend se conecta al API que despliega `template.yaml`. Dos
-páginas:
+Muestra cómo un frontend se conecta al API desplegado con SAM desde
+[`joadva/demo`](https://github.com/joadva/demo). Dos páginas:
 
 - `/` — explica los tres pasos de la conexión y prueba en vivo `/ping`,
   `/info` y `/echo` (incluido un 400 del gateway).
 - `/clientes/` — CRUD completo con errores por campo. Necesita las rutas
-  `/clientes` desplegadas y con base de datos (`docs/clientes-example.md`).
+  `/clientes` desplegadas y con base de datos (`docs/clientes-example.md` del
+  backend).
 
 Es un sitio estático (`output: 'export'`): no hay servidor de Next, el
-navegador llama al API directo. Se puede publicar en S3, GitHub Pages o Amplify.
+navegador llama al API directo.
 
-## Correrlo local
+## Cómo se vincula con el backend
 
-```powershell
-cd frontend
-npm install
-npm run env:aws      # lee ../aws-exports.json y escribe .env.local
-npm run dev          # http://localhost:3000
-```
+Con **una sola variable**: `NEXT_PUBLIC_API_URL`. Es el output `ApiURL` del
+stack y no cambia entre despliegues del backend, así que se pone una vez por
+ambiente. Se obtiene de cualquiera de estas formas:
 
-`aws-exports.json` lo genera cada despliegue como artefacto
-`aws-exports-<stack>`; descárgalo del run de *Deploy Dev* (`gh run download
---name aws-exports-secrets-dev` o desde la web) y déjalo en la raíz del repo.
-También puedes escribir `.env.local` a mano (ver `.env.local.example`).
+- Del resumen del job *Deploy API* en las Actions del backend.
+- Del artefacto `aws-exports-<stack>` de ese mismo run (`npm run env:aws` lo
+  convierte en `.env.local`).
+- Directo de AWS:
+  ```powershell
+  aws cloudformation describe-stacks --stack-name secrets-dev --query "Stacks[0].Outputs[?OutputKey=='ApiURL'].OutputValue" --output text
+  ```
 
-## La conexión en tres líneas
+Todo el código que habla con el API está en `lib/api.js`: arma la URL, manda
+JSON y convierte cualquier respuesta no-2xx en un `ApiError` que unifica las
+dos formas del 400 del backend:
 
 ```js
 import { listClientes, createCliente, ApiError } from '@/lib/api';
@@ -38,72 +41,47 @@ try {
   if (err instanceof ApiError) {
     err.status;     // 400, 404, 409, 500
     err.message;    // "Datos invalidos"
-    err.detalle;    // texto del gateway cuando el cuerpo no cumple el schema
-    err.porCampo;   // { email: 'El correo no tiene un formato valido' }
+    err.detalle;    // texto de API Gateway cuando el cuerpo no cumple el schema
+    err.porCampo;   // { email: 'El correo no tiene un formato valido' } (reglas de la Lambda)
   }
 }
 ```
 
-`lib/api.js` es el único lugar que conoce la URL, las cabeceras y las dos
-formas del 400. Cada función pública lleva el nombre del `operationId` de
-`openapi.yaml`.
+Cada función pública lleva el nombre del `operationId` de `openapi.yaml`.
 
-## En GitHub Actions
+## Correrlo local
 
-Para construir el frontend apuntando al API recién desplegado, el job
-descarga el artefacto del mismo run (o de otro workflow con `run-id`) y lo
-convierte en `.env.local` antes de compilar:
-
-```yaml
-jobs:
-  build-frontend:
-    needs: [deploy-api]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      # Mismo run: el artefacto lo subio shared-deploy-api.yaml.
-      - uses: actions/download-artifact@v4
-        with:
-          name: aws-exports-secrets-dev
-
-      - working-directory: frontend
-        run: |
-          npm ci
-          npm run env:aws
-          npm run build            # deja el sitio estatico en frontend/out
+```powershell
+npm install
+Copy-Item .env.local.example .env.local   # y pon la URL real
+npm run dev                               # http://localhost:3000
 ```
 
-Si el frontend vive en otro repositorio, cambia el `download-artifact` por:
+O, si tienes el `aws-exports.json` del backend a la mano:
 
-```yaml
-      - uses: actions/download-artifact@v4
-        with:
-          name: aws-exports-secrets-dev
-          repository: joadva/demo
-          run-id: ${{ github.event.inputs.run_id }}   # o el ultimo run exitoso via gh
-          github-token: ${{ secrets.GH_TOKEN_DEMO }}  # PAT con actions:read sobre joadva/demo
+```powershell
+npm run env:aws -- ruta/al/aws-exports.json
 ```
 
-Para los stacks efímeros de cada PR el nombre del artefacto es
-`aws-exports-<stack>` (por ejemplo `aws-exports-demo-secrets-filtro-po`); el
-nombre lo calcula `resolve-stack-name.yaml`.
+## Publicarlo (GitHub Pages, automático)
 
-## Dónde publicarlo
+`.github/workflows/deploy.yaml` compila y publica en cada push a `main`. Sólo
+hay que configurar dos cosas en el repo, una vez:
 
-`npm run build` deja HTML/JS en `frontend/out/`. Ese directorio se sube tal
-cual a un bucket S3 con hosting estático, a GitHub Pages
-(`actions/upload-pages-artifact` con `path: frontend/out`) o a Amplify Hosting.
+1. **Settings → Pages → Source: GitHub Actions.**
+2. **Settings → Secrets and variables → Actions → Variables → New repository
+   variable:** `NEXT_PUBLIC_API_URL` = la URL de `secrets-dev`.
+
+El sitio queda en `https://<usuario>.github.io/<repo>/`. Como es un sitio de
+proyecto, el workflow pasa `NEXT_PUBLIC_BASE_PATH=/<repo>` para que las rutas
+y los assets cuelguen de ahí; con dominio propio se quita esa línea.
+
+Para publicar en otro lado (S3, Amplify Hosting, Vercel) el resultado es el
+mismo directorio `out/`; sólo cambia el paso final del workflow.
 
 ## Si `npm run build` muere con "heap out of memory"
 
-Los workers de Next se quedan sin memoria en máquinas con poca RAM libre.
-Dale más heap a Node:
+Los workers de Next se quedan sin memoria en máquinas con poca RAM libre:
 
 ```powershell
 $env:NODE_OPTIONS = "--max-old-space-size=4096"; npm run build
