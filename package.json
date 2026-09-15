@@ -6,7 +6,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "portman": "portman --cliOptionsFile portman/portman-cli.json"
+    "portman": "portman --cliOptionsFile portman/portman-cli.json",
+    "db:init": "node --env-file-if-exists=.env.local scripts/db-init.mjs",
+    "demo": "node --env-file-if-exists=.env.local scripts/demo-local.mjs"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.35.0",

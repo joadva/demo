@@ -14,7 +14,9 @@ pasa completo.
 
 Lo único que se quitó son las definiciones de infraestructura. Para reactivarlo:
 
-1. Crea la base de datos y ejecuta `sql/clientes.sql` contra ella.
+1. Crea la base de datos y carga `sql/clientes.sql` con `npm run db:init`
+   (ver `docs/local-db.md`: Docker local para probar, o una MySQL en la nube
+   para las Lambdas desplegadas).
 2. Pon las credenciales reales en los secrets `DB_*` del Environment `dev`.
 3. Pega los bloques de abajo en `openapi.yaml` y `template.yaml`.
 4. Lee la sección 6 para saber qué valida cada capa, y la 7 antes de correr
