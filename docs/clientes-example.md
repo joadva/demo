@@ -7,8 +7,9 @@ pasa completo.
 
 **El código sigue en el repositorio y sus pruebas siguen corriendo:**
 
-- `src/functions/clientes/` — los 5 handlers, cada uno con su función de acceso
-  a datos y sus pruebas en `tests/`
+- `src/functions/clientes/` — los 5 handlers, cada uno con sus funciones de
+  validación y de acceso a datos en el mismo `index.mjs`, y sus pruebas en
+  `tests/` (reglas, procedimiento y handler completo)
 - `sql/clientes.sql` — la tabla y los 5 stored procedures
 
 Lo único que se quitó son las definiciones de infraestructura. Para reactivarlo:
@@ -16,6 +17,8 @@ Lo único que se quitó son las definiciones de infraestructura. Para reactivarl
 1. Crea la base de datos y ejecuta `sql/clientes.sql` contra ella.
 2. Pon las credenciales reales en los secrets `DB_*` del Environment `dev`.
 3. Pega los bloques de abajo en `openapi.yaml` y `template.yaml`.
+4. Lee la sección 6 para saber qué valida cada capa, y la 7 antes de correr
+   Portman.
 
 ---
 
@@ -76,6 +79,8 @@ Van dentro de `paths:`, después de `/echo`.
                     maxItems: 200
                     items:
                       $ref: '#/components/schemas/cliente'
+        '400':
+          $ref: '#/components/responses/validationError'
         '500':
           $ref: '#/components/responses/unexpectedError'
       x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
@@ -106,6 +111,8 @@ Van dentro de `paths:`, después de `/echo`.
             application/json:
               schema:
                 $ref: '#/components/schemas/cliente'
+        '400':
+          $ref: '#/components/responses/validationError'
         '409':
           $ref: '#/components/responses/conflict'
         '500':
@@ -142,6 +149,8 @@ Van dentro de `paths:`, después de `/echo`.
             application/json:
               schema:
                 $ref: '#/components/schemas/cliente'
+        '400':
+          $ref: '#/components/responses/validationError'
         '404':
           $ref: '#/components/responses/notFound'
         '500':
@@ -174,6 +183,8 @@ Van dentro de `paths:`, después de `/echo`.
             application/json:
               schema:
                 $ref: '#/components/schemas/cliente'
+        '400':
+          $ref: '#/components/responses/validationError'
         '404':
           $ref: '#/components/responses/notFound'
         '409':
@@ -197,6 +208,8 @@ Van dentro de `paths:`, después de `/echo`.
       responses:
         '204':
           description: 'No Content'
+        '400':
+          $ref: '#/components/responses/validationError'
         '404':
           $ref: '#/components/responses/notFound'
         '500':
@@ -240,6 +253,9 @@ Van dentro de `components.schemas:`.
           type: string
           format: date-time
 
+    # Todo lo que esta aqui lo rechaza API Gateway antes de invocar la Lambda.
+    # Ojo: `format: email` solo documenta; el gateway NO lo valida. Por eso el
+    # formato del correo se revisa en la Lambda (ver seccion 6).
     clienteInput:
       type: object
       additionalProperties: false
@@ -259,7 +275,8 @@ Van dentro de `components.schemas:`.
         telefono:
           type: string
           nullable: true
-          maxLength: 20
+          pattern: '^[0-9]{10}$'
+          maxLength: 10
 ```
 
 ## 4. `openapi.yaml` — las respuestas compartidas
@@ -267,6 +284,41 @@ Van dentro de `components.schemas:`.
 Van dentro de `components.responses:`, junto a `unexpectedError`.
 
 ```yaml
+    # Un 400 puede venir de dos lugares con dos formas distintas:
+    #   - API Gateway (schema):  { message, detalle }
+    #   - la Lambda (negocio):   { message, errores: [{ campo, mensaje }] }
+    # Solo `message` es obligatorio para que el schema cubra ambas.
+    validationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - message
+            properties:
+              message:
+                type: string
+                maxLength: 200
+              detalle:
+                type: string
+                maxLength: 2000
+              errores:
+                type: array
+                maxItems: 20
+                items:
+                  type: object
+                  required:
+                    - campo
+                    - mensaje
+                  properties:
+                    campo:
+                      type: string
+                      maxLength: 60
+                    mensaje:
+                      type: string
+                      maxLength: 200
+
     notFound:
       description: Resource not found
       content:
@@ -477,3 +529,53 @@ Van dentro de `Resources:`, después de `StatusFunction`.
         Banner:
           - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 ```
+
+## 6. Reglas de validación — quién valida qué
+
+Hay dos capas y cada regla vive en una sola:
+
+| Regla | Dónde | Por qué |
+|---|---|---|
+| `nombre` y `email` obligatorios | OpenAPI (`required`) | El gateway lo rechaza sin invocar la Lambda |
+| tipos, `maxLength`, campos desconocidos | OpenAPI (`type`, `maxLength`, `additionalProperties: false`) | idem |
+| `telefono` de 10 dígitos | OpenAPI (`pattern`) | idem |
+| `clienteId` entero positivo | Lambda (`validarClienteId`) | El gateway sólo comprueba que el parámetro de ruta exista, no su tipo |
+| `limite` 1..200, `offset` ≥ 0 | Lambda (`validarPaginacion`) | Igual: los parámetros de query no se tipan |
+| `nombre` con al menos 2 caracteres reales | Lambda (`validarCliente`) | El schema no puede recortar espacios |
+| formato del correo | Lambda (`validarCliente`) | API Gateway ignora `format: email` |
+| correo repetido | Lambda (captura `ER_DUP_ENTRY` → 409) | Lo sabe la base de datos |
+
+Además `normalizarCliente` recorta espacios y pasa el correo a minúsculas antes
+de validar y de llamar al procedimiento, para que `Ana@Demo.mx` y `ana@demo.mx`
+sean el mismo cliente frente al `UNIQUE` de la tabla.
+
+Las dos capas responden 400 con formas distintas; el frontend distingue por la
+presencia de `errores`:
+
+```json
+{ "message": "Solicitud invalida", "detalle": "[object has missing required properties ([\"email\"])]" }
+```
+
+```json
+{ "message": "Datos invalidos", "errores": [{ "campo": "email", "mensaje": "El correo no tiene un formato valido" }] }
+```
+
+La primera la arma la plantilla `BAD_REQUEST_BODY` de `openapi.yaml`; la
+segunda, la Lambda. Ninguna regla se repite en las dos capas: si el gateway ya
+rechazó el cuerpo, la Lambda nunca lo ve.
+
+## 7. Portman
+
+Portman exige 2xx en cada operación. Mientras no haya base de datos, al
+reactivar estas rutas hay que excluirlas del run en `portman/portman-filter.json`
+(la lista `operationIds` **excluye**):
+
+```json
+{ "operationIds": ["listClientes", "createCliente", "getCliente", "updateCliente", "deleteCliente"] }
+```
+
+Con base de datos, vacía la lista y agrega las operaciones a
+`globals.orderOfOperations` en `portman/portman-config.json` (POST antes que
+GET/PUT/DELETE para que exista el registro). Los `variationTests` ya
+configurados harán fuzzing de los 400: quitan campos requeridos y acortan o
+alargan cadenas, y comprueban que la respuesta cumpla `validationError`.

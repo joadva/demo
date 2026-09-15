@@ -11,11 +11,9 @@ tags:
     description: Tool endpoints
 
 servers:
-  # Marcador de posicion. publish-docs.yaml lo reemplaza al publicar con
-  # las URLs reales de los stacks desplegados, y el job de post-deploy le pasa
-  # a Portman la suya con --baseUrl. Nadie deberia usar este valor.
+
   - url: https://reemplazar.execute-api.us-east-1.amazonaws.com/api
-    description: Placeholder
+    description: BASE URL for API calls
 
 x-amazon-apigateway-request-validators:
   Validate body, query string parameters, and headers:
@@ -23,10 +21,13 @@ x-amazon-apigateway-request-validators:
     validateRequestBody: true
 
 x-amazon-apigateway-gateway-responses:
+  # Cuerpo rechazado por el request validator. El mensaje es fijo; el detalle
+  # es el texto de JSON Schema del gateway (no se puede personalizar por campo).
+  # Las reglas de negocio con mensaje propio van en cada Lambda.
   BAD_REQUEST_BODY:
     statusCode: 400
     responseTemplates:
-      application/json: '{ "message": "$context.error.validationErrorString" }'
+      application/json: '{ "message": "Solicitud invalida", "detalle": "$context.error.validationErrorString" }'
     responseParameters:
       gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
   UNAUTHORIZED:

@@ -35,25 +35,6 @@ Globals:
      AllowOrigin: "'*'"
 
 Resources:
-  # Alternativa con Secrets Manager. Desactivada porque cobra ~0.40 USD por
-  # secreto al mes solo por existir, aunque nunca se consulte. Hoy las
-  # credenciales viajan como variables de entorno de cada funcion.
-  #
-  # Para volver a ella hay que hacer cuatro cosas:
-  #   1. Descomentar este recurso y el output DatabaseConnectionSecretArn.
-  #   2. En cada funcion, cambiar las cinco variables DB_* por
-  #      DATABASE_CONNECTION_SECRET: !Ref DatabaseConnectionSecret
-  #   3. En cada funcion, devolver el permiso sobre el secreto:
-  #        - Version: 2012-10-17
-  #          Statement:
-  #            - Effect: Allow
-  #              Action:
-  #                - secretsmanager:GetSecretValue
-  #              Resource:
-  #                - !Ref DatabaseConnectionSecret
-  #   4. En src/shared/database/index.mjs, leer las credenciales con
-  #      getSecret(process.env.DATABASE_CONNECTION_SECRET, { transform: 'json' })
-  #      en lugar de process.env.
   #
   # DatabaseConnectionSecret:
   #   Type: AWS::SecretsManager::Secret
@@ -221,7 +202,6 @@ Outputs:
     Description: Nombre del stack que atiende estas rutas
     Value: !Ref AWS::StackName
 
-  # Ver la nota del recurso DatabaseConnectionSecret en la seccion Resources.
   #
   # DatabaseConnectionSecretArn:
   #   Description: ARN of the DatabaseConnectionSecret
