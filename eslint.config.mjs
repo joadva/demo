@@ -12,7 +12,9 @@ export default [
       'node_modules/',
       '.aws-sam/',
       'docs/coverage/',
-      'collection.postman.json'
+      'collection.postman.json',
+      // Proyecto de Next con su propia configuracion (JSX, React).
+      'frontend/'
     ]
   },
 
