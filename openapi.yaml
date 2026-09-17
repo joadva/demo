@@ -83,7 +83,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/pong'
+                type: object
+                required:
+                  - message
+                  - timestamp
+                properties:
+                  message:
+                    type: string
+                    maxLength: 20
+                  timestamp:
+                    type: string
+                    format: date-time
         '500':
           $ref: '#/components/responses/unexpectedError'
       x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
@@ -108,7 +118,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/serviceInfo'
+                type: object
+                required:
+                  - service
+                  - version
+                  - region
+                  - timestamp
+                properties:
+                  service:
+                    type: string
+                    maxLength: 60
+                  version:
+                    type: string
+                    maxLength: 20
+                  region:
+                    type: string
+                    maxLength: 30
+                  timestamp:
+                    type: string
+                    format: date-time
         '500':
           $ref: '#/components/responses/unexpectedError'
       x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
@@ -132,14 +160,29 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/echoInput'
+              type: object
+              additionalProperties: true
+              properties:
+                mensaje:
+                  type: string
+                  maxLength: 500
       responses:
         '200':
           description: 'Success'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/echoOutput'
+                type: object
+                required:
+                  - receivedAt
+                  - payload
+                properties:
+                  receivedAt:
+                    type: string
+                    format: date-time
+                  payload:
+                    type: object
+                    additionalProperties: true
         '500':
           $ref: '#/components/responses/unexpectedError'
       x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
@@ -150,62 +193,6 @@ paths:
         type: aws_proxy
 
 components:
-  schemas:
-    pong:
-      type: object
-      required:
-        - message
-        - timestamp
-      properties:
-        message:
-          type: string
-          maxLength: 20
-        timestamp:
-          type: string
-          format: date-time
-
-    serviceInfo:
-      type: object
-      required:
-        - service
-        - version
-        - region
-        - timestamp
-      properties:
-        service:
-          type: string
-          maxLength: 60
-        version:
-          type: string
-          maxLength: 20
-        region:
-          type: string
-          maxLength: 30
-        timestamp:
-          type: string
-          format: date-time
-
-    echoInput:
-      type: object
-      additionalProperties: true
-      properties:
-        mensaje:
-          type: string
-          maxLength: 500
-
-    echoOutput:
-      type: object
-      required:
-        - receivedAt
-        - payload
-      properties:
-        receivedAt:
-          type: string
-          format: date-time
-        payload:
-          type: object
-          additionalProperties: true
-
   responses:
     unexpectedError:
       description: Unexpected error

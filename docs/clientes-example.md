@@ -12,14 +12,16 @@ pasa completo.
   `tests/` (reglas, procedimiento y handler completo)
 - `sql/clientes.sql` — la tabla y los 5 stored procedures
 
-Lo único que se quitó son las definiciones de infraestructura. Para reactivarlo:
+Lo único que se quitó son las definiciones de infraestructura. Los schemas van
+escritos dentro de cada operación (no en `components.schemas`), así cada ruta
+se lee completa en un solo lugar. Para reactivarlo:
 
 1. Crea la base de datos y carga `sql/clientes.sql` con `npm run db:init`
    (ver `docs/local-db.md`: Docker local para probar, o una MySQL en la nube
    para las Lambdas desplegadas).
 2. Pon las credenciales reales en los secrets `DB_*` del Environment `dev`.
 3. Pega los bloques de abajo en `openapi.yaml` y `template.yaml`.
-4. Lee la sección 6 para saber qué valida cada capa, y la 7 antes de correr
+4. Lee la sección 5 para saber qué valida cada capa, y la 6 antes de correr
    Portman.
 
 ---
@@ -80,7 +82,30 @@ Van dentro de `paths:`, después de `/echo`.
                     type: array
                     maxItems: 200
                     items:
-                      $ref: '#/components/schemas/cliente'
+                      type: object
+                      required:
+                        - clienteId
+                        - nombre
+                        - email
+                      properties:
+                        clienteId:
+                          type: integer
+                          minimum: 1
+                          maximum: 2147483647
+                        nombre:
+                          type: string
+                          maxLength: 120
+                        email:
+                          type: string
+                          format: email
+                          maxLength: 180
+                        telefono:
+                          type: string
+                          nullable: true
+                          maxLength: 20
+                        creadoEn:
+                          type: string
+                          format: date-time
         '400':
           $ref: '#/components/responses/validationError'
         '500':
@@ -105,14 +130,59 @@ Van dentro de `paths:`, después de `/echo`.
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/clienteInput'
+              # Todo lo que esta aqui lo rechaza API Gateway antes de invocar la Lambda.
+              # Ojo: `format: email` solo documenta; el gateway NO lo valida. Por eso el
+              # formato del correo se revisa en la Lambda (ver seccion 5).
+              type: object
+              additionalProperties: false
+              required:
+                - nombre
+                - email
+              properties:
+                nombre:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+                email:
+                  type: string
+                  format: email
+                  minLength: 3
+                  maxLength: 180
+                telefono:
+                  type: string
+                  nullable: true
+                  pattern: '^[0-9]{10}$'
+                  maxLength: 10
       responses:
         '201':
           description: 'Created'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/cliente'
+                type: object
+                required:
+                  - clienteId
+                  - nombre
+                  - email
+                properties:
+                  clienteId:
+                    type: integer
+                    minimum: 1
+                    maximum: 2147483647
+                  nombre:
+                    type: string
+                    maxLength: 120
+                  email:
+                    type: string
+                    format: email
+                    maxLength: 180
+                  telefono:
+                    type: string
+                    nullable: true
+                    maxLength: 20
+                  creadoEn:
+                    type: string
+                    format: date-time
         '400':
           $ref: '#/components/responses/validationError'
         '409':
@@ -150,7 +220,30 @@ Van dentro de `paths:`, después de `/echo`.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/cliente'
+                type: object
+                required:
+                  - clienteId
+                  - nombre
+                  - email
+                properties:
+                  clienteId:
+                    type: integer
+                    minimum: 1
+                    maximum: 2147483647
+                  nombre:
+                    type: string
+                    maxLength: 120
+                  email:
+                    type: string
+                    format: email
+                    maxLength: 180
+                  telefono:
+                    type: string
+                    nullable: true
+                    maxLength: 20
+                  creadoEn:
+                    type: string
+                    format: date-time
         '400':
           $ref: '#/components/responses/validationError'
         '404':
@@ -177,14 +270,59 @@ Van dentro de `paths:`, después de `/echo`.
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/clienteInput'
+              # Todo lo que esta aqui lo rechaza API Gateway antes de invocar la Lambda.
+              # Ojo: `format: email` solo documenta; el gateway NO lo valida. Por eso el
+              # formato del correo se revisa en la Lambda (ver seccion 5).
+              type: object
+              additionalProperties: false
+              required:
+                - nombre
+                - email
+              properties:
+                nombre:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+                email:
+                  type: string
+                  format: email
+                  minLength: 3
+                  maxLength: 180
+                telefono:
+                  type: string
+                  nullable: true
+                  pattern: '^[0-9]{10}$'
+                  maxLength: 10
       responses:
         '200':
           description: 'Success'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/cliente'
+                type: object
+                required:
+                  - clienteId
+                  - nombre
+                  - email
+                properties:
+                  clienteId:
+                    type: integer
+                    minimum: 1
+                    maximum: 2147483647
+                  nombre:
+                    type: string
+                    maxLength: 120
+                  email:
+                    type: string
+                    format: email
+                    maxLength: 180
+                  telefono:
+                    type: string
+                    nullable: true
+                    maxLength: 20
+                  creadoEn:
+                    type: string
+                    format: date-time
         '400':
           $ref: '#/components/responses/validationError'
         '404':
@@ -224,64 +362,7 @@ Van dentro de `paths:`, después de `/echo`.
         type: aws_proxy
 ```
 
-## 3. `openapi.yaml` — los esquemas
-
-Van dentro de `components.schemas:`.
-
-```yaml
-    cliente:
-      type: object
-      required:
-        - clienteId
-        - nombre
-        - email
-      properties:
-        clienteId:
-          type: integer
-          minimum: 1
-          maximum: 2147483647
-        nombre:
-          type: string
-          maxLength: 120
-        email:
-          type: string
-          format: email
-          maxLength: 180
-        telefono:
-          type: string
-          nullable: true
-          maxLength: 20
-        creadoEn:
-          type: string
-          format: date-time
-
-    # Todo lo que esta aqui lo rechaza API Gateway antes de invocar la Lambda.
-    # Ojo: `format: email` solo documenta; el gateway NO lo valida. Por eso el
-    # formato del correo se revisa en la Lambda (ver seccion 6).
-    clienteInput:
-      type: object
-      additionalProperties: false
-      required:
-        - nombre
-        - email
-      properties:
-        nombre:
-          type: string
-          minLength: 1
-          maxLength: 120
-        email:
-          type: string
-          format: email
-          minLength: 3
-          maxLength: 180
-        telefono:
-          type: string
-          nullable: true
-          pattern: '^[0-9]{10}$'
-          maxLength: 10
-```
-
-## 4. `openapi.yaml` — las respuestas compartidas
+## 3. `openapi.yaml` — las respuestas compartidas
 
 Van dentro de `components.responses:`, junto a `unexpectedError`.
 
@@ -346,7 +427,7 @@ Van dentro de `components.responses:`, junto a `unexpectedError`.
                 type: string
 ```
 
-## 5. `template.yaml` — las cinco funciones
+## 4. `template.yaml` — las cinco funciones
 
 Van dentro de `Resources:`, después de `StatusFunction`.
 
@@ -532,7 +613,7 @@ Van dentro de `Resources:`, después de `StatusFunction`.
           - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 ```
 
-## 6. Reglas de validación — quién valida qué
+## 5. Reglas de validación — quién valida qué
 
 Hay dos capas y cada regla vive en una sola:
 
@@ -566,7 +647,7 @@ La primera la arma la plantilla `BAD_REQUEST_BODY` de `openapi.yaml`; la
 segunda, la Lambda. Ninguna regla se repite en las dos capas: si el gateway ya
 rechazó el cuerpo, la Lambda nunca lo ve.
 
-## 7. Portman
+## 6. Portman
 
 Portman exige 2xx en cada operación. Mientras no haya base de datos, al
 reactivar estas rutas hay que excluirlas del run en `portman/portman-filter.json`
