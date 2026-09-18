@@ -20,6 +20,23 @@ Parameters:
     Type: String
     NoEcho: true
 
+  # Alternativa: credenciales en un secreto de Secrets Manager, incluso de
+  # otra cuenta (docs/recursos-otra-cuenta.md). Al activarla sobran los cinco
+  # parametros DB* de arriba; ver el bloque comentado en StatusFunction.
+  #
+  # DatabaseSecretArn:
+  #   Type: String
+  #   Description: ARN completo del secreto, con su sufijo
+  # DatabaseKmsKeyArn:
+  #   Type: String
+  #   Description: Llave KMS con la que esta cifrado el secreto
+  #
+  # Autorizador de Cognito, opcional (docs/recursos-otra-cuenta.md seccion 2).
+  # Lo consume el securityScheme comentado en openapi.yaml.
+  #
+  # CognitoUserPoolArn:
+  #   Type: String
+
 Globals:
   Function:
     Tracing: Active
@@ -173,6 +190,24 @@ Resources:
           DB_DATABASE: !Ref DBDatabase
       Policies:
         - AWSLambdaBasicExecutionRole
+      # Version con el secreto en Secrets Manager (misma u otra cuenta).
+      # Reemplaza las cinco variables DB_* y la lista Policies de arriba, y
+      # en src/shared/database/index.mjs se descomenta la createConnection
+      # que usa getSecret(). Ver docs/recursos-otra-cuenta.md.
+      #
+      # Environment:
+      #   Variables:
+      #     DATABASE_CONNECTION_SECRET: !Ref DatabaseSecretArn
+      # Policies:
+      #   - AWSLambdaBasicExecutionRole
+      #   - Version: 2012-10-17
+      #     Statement:
+      #       - Effect: Allow
+      #         Action: secretsmanager:GetSecretValue
+      #         Resource: !Ref DatabaseSecretArn
+      #       - Effect: Allow
+      #         Action: kms:Decrypt
+      #         Resource: !Ref DatabaseKmsKeyArn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:

@@ -207,3 +207,22 @@ components:
                 type: string
                 enum:
                   - Something went wrong!
+
+  # Autorizador de Cognito, opcional. El user pool puede ser de otra cuenta
+  # (misma region); API Gateway valida el token con las llaves publicas del
+  # pool, sin permisos entre cuentas. Para activarlo: descomentar, declarar
+  # CognitoUserPoolArn en template.yaml y agregar en cada operacion protegida
+  #   security:
+  #     - cognitoAuth: []
+  # Ver docs/recursos-otra-cuenta.md seccion 2.
+  #
+  # securitySchemes:
+  #   cognitoAuth:
+  #     type: apiKey
+  #     name: Authorization
+  #     in: header
+  #     x-amazon-apigateway-authtype: cognito_user_pools
+  #     x-amazon-apigateway-authorizer:
+  #       type: cognito_user_pools
+  #       providerARNs:
+  #         - Fn::Sub: ${CognitoUserPoolArn}
