@@ -1,60 +1,59 @@
 import mysql from 'mysql2/promise';
+import { getSecret } from '@aws-lambda-powertools/parameters/secrets';
+
 import { logger } from '../lambda-powertools/index.mjs';
 
-// Version con Secrets Manager, desactivada porque el secreto cobra ~0.40 USD
-// al mes solo por existir. Descomentar este import junto con la funcion
-// createConnection de mas abajo, y seguir los 4 pasos de la nota del recurso
-// DatabaseConnectionSecret en template.yaml.
-//
-// import { getSecret } from '@aws-lambda-powertools/parameters/secrets';
+/**
+ * Lee las credenciales del secreto de Secrets Manager cuyo ARN llega en
+ * DATABASE_CONNECTION_SECRET. template.yaml le pasa a cada funcion el secreto
+ * de lectura o el de escritura segun lo que haga.
+ *
+ * El secreto guarda un JSON con esta forma:
+ *   { "connectionDetails": {
+ *       "host": "...", "user": "...", "password": "...",
+ *       "port": "3306", "database": "..." } }
+ *
+ * getSecret() cachea el valor los segundos de maxAge, asi que invocaciones
+ * seguidas en una misma Lambda tibia no vuelven a pegarle a la API.
+ * @return {Promise<Object>} Opciones de conexion para mysql2.
+ */
+const credencialesDelSecreto = async () => {
+  const secret = await getSecret(process.env.DATABASE_CONNECTION_SECRET, {
+    transform: 'json',
+    maxAge: 300
+  });
+
+  const { host, user, password, port, database } = secret.connectionDetails;
+
+  return { host, user, password, port: Number(port), database };
+};
 
 /**
- * Creates a connection to the MySQL database using the credentials that
- * template.yaml passes as environment variables.
+ * Credenciales en variables de entorno. Es lo que usan los scripts locales
+ * (npm run demo) y sirve de alternativa si algun dia se quiere prescindir de
+ * Secrets Manager: basta desplegar con las cinco variables DB* que estan
+ * comentadas en template.yaml y no definir DATABASE_CONNECTION_SECRET.
+ * @return {Object} Opciones de conexion para mysql2.
+ */
+const credencialesDelEntorno = () => ({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  port: Number(process.env.DB_PORT),
+  database: process.env.DB_DATABASE
+});
+
+/**
+ * Creates a connection to the MySQL database.
  * @return {Promise<mysql.Connection>} MySQL database connection.
  */
 const createConnection = async () => {
-  return mysql.createConnection({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    port: Number(process.env.DB_PORT),
-    database: process.env.DB_DATABASE
-  });
-};
+  const credenciales = process.env.DATABASE_CONNECTION_SECRET
+    ? await credencialesDelSecreto()
+    : credencialesDelEntorno();
 
-// Alternativa con Secrets Manager. Reemplaza a la createConnection de arriba.
-//
-// El secreto guarda un JSON con esta forma, generado por template.yaml:
-//   { "connectionDetails": {
-//       "host": "...", "user": "...", "password": "...",
-//       "port": "3306", "database": "..." } }
-//
-// getSecret() trae el valor y lo cachea 5 segundos por omision, asi que
-// invocaciones seguidas en una misma Lambda tibia no vuelven a pegarle a la
-// API de Secrets Manager. El segundo argumento controla ese cache:
-//   getSecret(nombre, { transform: 'json', maxAge: 300 })
-//
-// La funcion necesita la variable de entorno DATABASE_CONNECTION_SECRET y el
-// permiso secretsmanager:GetSecretValue sobre el secreto; ambos estan en la
-// nota de template.yaml.
-//
-// /**
-//  * Creates a connection to the MySQL database using credentials from AWS Secrets Manager.
-//  * @return {Promise<mysql.Connection>} MySQL database connection.
-//  */
-// const createConnection = async () => {
-//   const secret = await getSecret(process.env.DATABASE_CONNECTION_SECRET, { transform: 'json' });
-//   const { host, user, password, port, database } = secret.connectionDetails;
-//
-//   return mysql.createConnection({
-//     host,
-//     user,
-//     password,
-//     port: Number(port),
-//     database
-//   });
-// };
+  return mysql.createConnection(credenciales);
+};
 
 /**
  * Executes a query in the database and closes the connection afterwards.

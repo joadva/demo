@@ -97,9 +97,15 @@ Con la base creada:
 
 1. Pon sus credenciales en `.env.local` (copia `.env.local.example`) y carga
    el esquema: `npm run db:init`. Comprueba con `npm run demo`.
-2. Pon las mismas credenciales en los secrets `DB_HOST`, `DB_PORT`, `DB_USER`,
-   `DB_PASSWORD` y `DB_DATABASE` del Environment `dev` en GitHub.
-3. Activa las rutas siguiendo `docs/clientes-example.md` (bloques de
-   `openapi.yaml` y `template.yaml`, filtro de Portman).
+2. Guarda las credenciales en dos secretos de Secrets Manager (uno con un
+   usuario de solo lectura y otro con uno que pueda escribir) y pon sus ARN
+   en los secrets `READ_SECRET_DB` y `WRITE_SECRET_DB` del Environment `dev`
+   en GitHub. El JSON del secreto va asi:
+
+   ```json
+   { "connectionDetails": { "host": "...", "user": "...", "password": "...", "port": "3306", "database": "..." } }
+   ```
+3. Despliega: las rutas `/clientes` ya estan en `openapi.yaml` y
+   `template.yaml`.
 
 `.env.local` está en `.gitignore`; nunca lo subas.

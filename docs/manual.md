@@ -110,7 +110,11 @@ Tres cosas que conviene fijar desde el principio:
 
 ## 4. Anatomía de una Lambda
 
-Una Lambda son cuatro archivos que se corresponden entre sí. Con `/ping`:
+Una Lambda son cuatro archivos que se corresponden entre sí. Se explica con
+`/ping` porque es la más pequeña que existe: su código y sus pruebas están en
+`src/functions/ping/`, aunque hoy no se despliega (el API sólo expone
+`/clientes`, ver sección 7). El bloque de `template.yaml` de abajo es el que
+habría que agregar para publicarla.
 
 ### 4.1 El código — `src/functions/ping/index.mjs`
 
@@ -400,7 +404,8 @@ con los parámetros `Stage` (dev/test/prod), `GitHubOrg`, `RepositoryName` y
 | Variable | `PIPELINE_EXECUTION_ROLE` | ARN del rol `gha-…-pipeline` (output del bootstrap) |
 | Variable | `CLOUDFORMATION_EXECUTION_ROLE` | ARN del rol `gha-…-cfn-exec` |
 | Variable | `ARTIFACTS_BUCKET_NAME` | nombre del bucket |
-| Secret | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_DATABASE` | credenciales de MySQL de ese ambiente |
+| Secret | `READ_SECRET_DB` | ARN del secreto con el usuario de MySQL de solo lectura |
+| Secret | `WRITE_SECRET_DB` | ARN del secreto con el usuario que puede escribir |
 
 Los valores van en el Environment, **no** a nivel de repositorio: si se
 duplican a nivel repo, un ambiente sin configurar hereda los de otro sin

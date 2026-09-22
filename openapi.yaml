@@ -7,8 +7,8 @@ info:
     name: Demo
 
 tags:
-  - name: Tool
-    description: Tool endpoints
+  - name: Clientes
+    description: CRUD de ejemplo sobre la tabla clientes vía stored procedures
 
 servers:
 
@@ -44,74 +44,34 @@ x-amazon-apigateway-gateway-responses:
       gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
 
 paths:
-  /status:
+  /clientes:
     get:
-      summary: Return service connections status
-      operationId: status
+      summary: List clientes
+      operationId: listClientes
       description: |
-        Status message about the service connection
+        Returns a paginated list of clientes via the sp_clientes_listar
+        stored procedure.
       tags:
-        - Tool
-      responses:
-        '200':
-          description: 'Success'
-          content:
-            application/json:
-              schema:
-                type: object
-        '500':
-          $ref: '#/components/responses/unexpectedError'
-      x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
-      x-amazon-apigateway-integration:
-        uri:
-          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${StatusFunction.Arn}/invocations
-        httpMethod: POST
-        type: aws_proxy
-
-  /ping:
-    get:
-      summary: Liveness check
-      operationId: ping
-      description: |
-        Always answers 200. No depende de la base de datos ni de servicios
-        externos, asi que sirve para verificar que el despliegue quedo vivo.
-      tags:
-        - Tool
-      responses:
-        '200':
-          description: 'Success'
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - message
-                  - timestamp
-                properties:
-                  message:
-                    type: string
-                    maxLength: 20
-                  timestamp:
-                    type: string
-                    format: date-time
-        '500':
-          $ref: '#/components/responses/unexpectedError'
-      x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
-      x-amazon-apigateway-integration:
-        uri:
-          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PingFunction.Arn}/invocations
-        httpMethod: POST
-        type: aws_proxy
-
-  /info:
-    get:
-      summary: Service metadata
-      operationId: info
-      description: |
-        Returns the service name, version and region. Solo lee variables de
-        entorno, asi que tampoco depende de nada externo.
-      tags:
-        - Tool
+        - Clientes
+      parameters:
+        - name: limite
+          in: query
+          required: false
+          description: Maximum number of rows to return.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          description: Number of rows to skip before collecting the result set.
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 1000000
+            default: 0
       responses:
         '200':
           description: 'Success'
@@ -120,52 +80,144 @@ paths:
               schema:
                 type: object
                 required:
-                  - service
-                  - version
-                  - region
-                  - timestamp
+                  - clientes
                 properties:
-                  service:
-                    type: string
-                    maxLength: 60
-                  version:
-                    type: string
-                    maxLength: 20
-                  region:
-                    type: string
-                    maxLength: 30
-                  timestamp:
-                    type: string
-                    format: date-time
+                  clientes:
+                    type: array
+                    maxItems: 200
+                    items:
+                      type: object
+                      required:
+                        - clienteId
+                        - nombre
+                        - email
+                      properties:
+                        clienteId:
+                          type: integer
+                          minimum: 1
+                          maximum: 2147483647
+                        nombre:
+                          type: string
+                          maxLength: 120
+                        email:
+                          type: string
+                          format: email
+                          maxLength: 180
+                        telefono:
+                          type: string
+                          nullable: true
+                          maxLength: 20
+                        creadoEn:
+                          type: string
+                          format: date-time
+        '400':
+          $ref: '#/components/responses/validationError'
         '500':
           $ref: '#/components/responses/unexpectedError'
       x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${InfoFunction.Arn}/invocations
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListClientesFunction.Arn}/invocations
         httpMethod: POST
         type: aws_proxy
 
-  /echo:
     post:
-      summary: Echo the request body
-      operationId: echo
+      summary: Create a cliente
+      operationId: createCliente
       description: |
-        Devuelve el mismo cuerpo que recibio. Util para comprobar de punta a
-        punta el validador de peticiones y la integracion con la Lambda.
+        Creates a cliente via the sp_clientes_crear stored procedure and
+        returns the resulting row.
       tags:
-        - Tool
+        - Clientes
       requestBody:
         required: true
         content:
           application/json:
             schema:
+              # Todo lo que esta aqui lo rechaza API Gateway antes de invocar la Lambda.
+              # Ojo: `format: email` solo documenta; el gateway NO lo valida. Por eso el
+              # formato del correo se revisa en la Lambda (ver seccion 5).
               type: object
-              additionalProperties: true
+              additionalProperties: false
+              required:
+                - nombre
+                - email
               properties:
-                mensaje:
+                nombre:
                   type: string
-                  maxLength: 500
+                  minLength: 1
+                  maxLength: 120
+                email:
+                  type: string
+                  format: email
+                  minLength: 3
+                  maxLength: 180
+                telefono:
+                  type: string
+                  nullable: true
+                  pattern: '^[0-9]{10}$'
+                  maxLength: 10
+      responses:
+        '201':
+          description: 'Created'
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - clienteId
+                  - nombre
+                  - email
+                properties:
+                  clienteId:
+                    type: integer
+                    minimum: 1
+                    maximum: 2147483647
+                  nombre:
+                    type: string
+                    maxLength: 120
+                  email:
+                    type: string
+                    format: email
+                    maxLength: 180
+                  telefono:
+                    type: string
+                    nullable: true
+                    maxLength: 20
+                  creadoEn:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/validationError'
+        '409':
+          $ref: '#/components/responses/conflict'
+        '500':
+          $ref: '#/components/responses/unexpectedError'
+      x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateClienteFunction.Arn}/invocations
+        httpMethod: POST
+        type: aws_proxy
+
+  /clientes/{clienteId}:
+    parameters:
+      - name: clienteId
+        in: path
+        required: true
+        description: Identifier of the cliente.
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+
+    get:
+      summary: Get a cliente
+      operationId: getCliente
+      description: |
+        Returns a single cliente via the sp_clientes_obtener stored procedure.
+      tags:
+        - Clientes
       responses:
         '200':
           description: 'Success'
@@ -174,26 +226,205 @@ paths:
               schema:
                 type: object
                 required:
-                  - receivedAt
-                  - payload
+                  - clienteId
+                  - nombre
+                  - email
                 properties:
-                  receivedAt:
+                  clienteId:
+                    type: integer
+                    minimum: 1
+                    maximum: 2147483647
+                  nombre:
+                    type: string
+                    maxLength: 120
+                  email:
+                    type: string
+                    format: email
+                    maxLength: 180
+                  telefono:
+                    type: string
+                    nullable: true
+                    maxLength: 20
+                  creadoEn:
                     type: string
                     format: date-time
-                  payload:
-                    type: object
-                    additionalProperties: true
+        '400':
+          $ref: '#/components/responses/validationError'
+        '404':
+          $ref: '#/components/responses/notFound'
         '500':
           $ref: '#/components/responses/unexpectedError'
       x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${EchoFunction.Arn}/invocations
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetClienteFunction.Arn}/invocations
+        httpMethod: POST
+        type: aws_proxy
+
+    put:
+      summary: Update a cliente
+      operationId: updateCliente
+      description: |
+        Replaces the editable fields of a cliente via the
+        sp_clientes_actualizar stored procedure.
+      tags:
+        - Clientes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              # Todo lo que esta aqui lo rechaza API Gateway antes de invocar la Lambda.
+              # Ojo: `format: email` solo documenta; el gateway NO lo valida. Por eso el
+              # formato del correo se revisa en la Lambda (ver seccion 5).
+              type: object
+              additionalProperties: false
+              required:
+                - nombre
+                - email
+              properties:
+                nombre:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+                email:
+                  type: string
+                  format: email
+                  minLength: 3
+                  maxLength: 180
+                telefono:
+                  type: string
+                  nullable: true
+                  pattern: '^[0-9]{10}$'
+                  maxLength: 10
+      responses:
+        '200':
+          description: 'Success'
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - clienteId
+                  - nombre
+                  - email
+                properties:
+                  clienteId:
+                    type: integer
+                    minimum: 1
+                    maximum: 2147483647
+                  nombre:
+                    type: string
+                    maxLength: 120
+                  email:
+                    type: string
+                    format: email
+                    maxLength: 180
+                  telefono:
+                    type: string
+                    nullable: true
+                    maxLength: 20
+                  creadoEn:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/validationError'
+        '404':
+          $ref: '#/components/responses/notFound'
+        '409':
+          $ref: '#/components/responses/conflict'
+        '500':
+          $ref: '#/components/responses/unexpectedError'
+      x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateClienteFunction.Arn}/invocations
+        httpMethod: POST
+        type: aws_proxy
+
+    delete:
+      summary: Delete a cliente
+      operationId: deleteCliente
+      description: |
+        Deletes a cliente via the sp_clientes_eliminar stored procedure.
+      tags:
+        - Clientes
+      responses:
+        '204':
+          description: 'No Content'
+        '400':
+          $ref: '#/components/responses/validationError'
+        '404':
+          $ref: '#/components/responses/notFound'
+        '500':
+          $ref: '#/components/responses/unexpectedError'
+      x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteClienteFunction.Arn}/invocations
         httpMethod: POST
         type: aws_proxy
 
 components:
   responses:
+    # Un 400 puede venir de dos lugares con dos formas distintas:
+    #   - API Gateway (schema):  { message, detalle }
+    #   - la Lambda (negocio):   { message, errores: [{ campo, mensaje }] }
+    # Solo `message` es obligatorio para que el schema cubra ambas.
+    validationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - message
+            properties:
+              message:
+                type: string
+                maxLength: 200
+              detalle:
+                type: string
+                maxLength: 2000
+              errores:
+                type: array
+                maxItems: 20
+                items:
+                  type: object
+                  required:
+                    - campo
+                    - mensaje
+                  properties:
+                    campo:
+                      type: string
+                      maxLength: 60
+                    mensaje:
+                      type: string
+                      maxLength: 200
+
+    notFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - message
+            properties:
+              message:
+                type: string
+
+    conflict:
+      description: Conflict with the current state of the resource
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - message
+            properties:
+              message:
+                type: string
     unexpectedError:
       description: Unexpected error
       content:

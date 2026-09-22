@@ -1,28 +1,18 @@
-# Ejemplo: CRUD de /clientes sobre stored procedures
+# Referencia: CRUD de /clientes sobre stored procedures
 
-Este CRUD estuvo desplegado y se retiró del API para que el ejemplo funcione
-de punta a punta sin depender de una base de datos: hoy sólo se despliegan
-Lambdas que no tocan MySQL, así todos los endpoints responden 200 y Portman
-pasa completo.
-
-**El código sigue en el repositorio y sus pruebas siguen corriendo:**
+El CRUD de `/clientes` **esta desplegado**: sus rutas viven en `openapi.yaml`
+y sus cinco funciones en `template.yaml`. Este documento se queda como
+referencia de los bloques completos (por si hay que rehacerlos o copiarlos a
+otro proyecto) y, sobre todo, por las secciones 5 y 6: que valida cada capa y
+como se configura Portman.
 
 - `src/functions/clientes/` — los 5 handlers, cada uno con sus funciones de
   validación y de acceso a datos en el mismo `index.mjs`, y sus pruebas en
   `tests/` (reglas, procedimiento y handler completo)
 - `sql/clientes.sql` — la tabla y los 5 stored procedures
+- `sql/seed.sql` — tres clientes de ejemplo
 
-Lo único que se quitó son las definiciones de infraestructura. Los schemas van
-escritos dentro de cada operación (no en `components.schemas`), así cada ruta
-se lee completa en un solo lugar. Para reactivarlo:
-
-1. Crea la base de datos y carga `sql/clientes.sql` con `npm run db:init`
-   (ver `docs/local-db.md`: Docker local para probar, o una MySQL en la nube
-   para las Lambdas desplegadas).
-2. Pon las credenciales reales en los secrets `DB_*` del Environment `dev`.
-3. Pega los bloques de abajo en `openapi.yaml` y `template.yaml`.
-4. Lee la sección 5 para saber qué valida cada capa, y la 6 antes de correr
-   Portman.
+Para levantar la base ver `docs/local-db.md`.
 
 ---
 
@@ -649,16 +639,32 @@ rechazó el cuerpo, la Lambda nunca lo ve.
 
 ## 6. Portman
 
-Portman exige 2xx en cada operación. Mientras no haya base de datos, al
-reactivar estas rutas hay que excluirlas del run en `portman/portman-filter.json`
-(la lista `operationIds` **excluye**):
+Portman exige 2xx en cada operación, y el CRUD sólo responde 2xx si la base
+está viva y con los procedimientos cargados. La configuración actual encadena
+las cinco operaciones para que se prueben en un solo recorrido.
 
-```json
-{ "operationIds": ["listClientes", "createCliente", "getCliente", "updateCliente", "deleteCliente"] }
-```
+En `portman/portman-config.json`:
 
-Con base de datos, vacía la lista y agrega las operaciones a
-`globals.orderOfOperations` en `portman/portman-config.json` (POST antes que
-GET/PUT/DELETE para que exista el registro). Los `variationTests` ya
-configurados harán fuzzing de los 400: quitan campos requeridos y acortan o
-alargan cadenas, y comprueban que la respuesta cumpla `validationError`.
+- **`globals.orderOfOperations`** pone el POST primero, porque los demás
+  necesitan un cliente existente: `POST /clientes` → `GET /clientes` →
+  `GET /clientes/{clienteId}` → `PUT /clientes/{clienteId}` →
+  `DELETE /clientes/{clienteId}`. El DELETE al final deja la tabla como estaba.
+- **`assignVariables`** guarda el `clienteId` que devuelve el POST en una
+  variable de colección.
+- **`overwrites`** hace dos cosas. Inyecta ese `{{clienteId}}` en las rutas con
+  parámetro: sin eso Portman usaría un id inventado a partir del schema y
+  daría 404. Y reemplaza el correo por `portman-{{$timestamp}}@demo.mx`: sin
+  eso mandaría siempre el mismo valor generado y la segunda corrida chocaría
+  con el `UNIQUE` de la tabla (409).
+
+En `portman/portman-filter.json` la lista `operationIds` está vacía. Recuerda
+que esa lista **excluye**: lo que pongas ahí es lo que NO se prueba.
+
+### Fuzzing de los 400
+
+Los `variationTests` quitan campos requeridos y comprueban que la respuesta
+cumpla `validationError`. Las variaciones por longitud (`minLengthFields` y
+`maxLengthFields`) están **desactivadas** a propósito: Portman 1.x truena al
+generarlas cuando el schema trae `minLength` o `maxLength`, con un
+`TypeError: Cannot read properties of undefined (reading 'city')` en su
+Fuzzer. Si alguna vez lo arreglan, se vuelven a encender ahí mismo.

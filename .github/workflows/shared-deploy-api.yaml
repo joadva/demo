@@ -70,11 +70,11 @@ jobs:
       - name: Replace Variables in samconfig
         run: |
           replace-in-files --string='{{StackName}}' --replacement='${{ inputs.STACK_NAME }}' ./samconfig.ci.yaml
-          replace-in-files --string='{{DBHost}}' --replacement='${{ secrets.DB_HOST }}' ./samconfig.ci.yaml
-          replace-in-files --string='{{DBUser}}' --replacement='${{ secrets.DB_USER }}' ./samconfig.ci.yaml
-          replace-in-files --string='{{DBPassword}}' --replacement='${{ secrets.DB_PASSWORD }}' ./samconfig.ci.yaml
-          replace-in-files --string='{{DBPort}}' --replacement='${{ secrets.DB_PORT }}' ./samconfig.ci.yaml
-          replace-in-files --string='{{DBDatabase}}' --replacement='${{ secrets.DB_DATABASE }}' ./samconfig.ci.yaml
+          # ARN de los secretos de Secrets Manager con las credenciales de
+          # MySQL, uno de lectura y otro de escritura. Las contrasenias ya no
+          # pasan por GitHub: las Lambdas las leen del secreto en ejecucion.
+          replace-in-files --string='{{ReadSecretArn}}' --replacement='${{ secrets.READ_SECRET_DB }}' ./samconfig.ci.yaml
+          replace-in-files --string='{{WriteSecretArn}}' --replacement='${{ secrets.WRITE_SECRET_DB }}' ./samconfig.ci.yaml
 
       - name: SAM Build
         if: ${{ steps.cache-sam-build.outputs.cache-hit != 'true' }}

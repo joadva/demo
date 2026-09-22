@@ -5,37 +5,45 @@ Transform:
   - AWS::Serverless-2016-10-31
 
 Parameters:
-  DBHost:
+  # ARN completo (con sufijo) de los secretos de Secrets Manager que guardan
+  # las credenciales de MySQL. Se separan por permiso: las funciones que solo
+  # consultan reciben el de lectura, las que modifican el de escritura, asi
+  # una falla en un GET no puede escribir en la base.
+  #
+  # El secreto guarda un JSON con esta forma:
+  #   { "connectionDetails": {
+  #       "host": "...", "user": "...", "password": "...",
+  #       "port": "3306", "database": "..." } }
+  #
+  # Si el secreto estuviera en otra cuenta hace falta ademas permiso kms:Decrypt
+  # sobre su llave; ver docs/recursos-otra-cuenta.md.
+  ReadSecretArn:
     Type: String
     NoEcho: true
-  DBUser:
-    Type: String
-    NoEcho: true
-  DBPassword:
-    Type: String
-    NoEcho: true
-  DBPort:
-    Type: String
-  DBDatabase:
-    Type: String
-    NoEcho: true
+    Description: Secreto con el usuario de MySQL de solo lectura
 
-  # Alternativa: credenciales en un secreto de Secrets Manager, incluso de
-  # otra cuenta (docs/recursos-otra-cuenta.md). Al activarla sobran los cinco
-  # parametros DB* de arriba; ver el bloque comentado en StatusFunction.
+  WriteSecretArn:
+    Type: String
+    NoEcho: true
+    Description: Secreto con el usuario de MySQL que puede escribir
+
+  # Alternativa sin Secrets Manager: las credenciales como variables de entorno.
+  # Ver la nota de createConnection en src/shared/database/index.mjs.
   #
-  # DatabaseSecretArn:
+  # DBHost:
   #   Type: String
-  #   Description: ARN completo del secreto, con su sufijo
-  # DatabaseKmsKeyArn:
+  #   NoEcho: true
+  # DBUser:
   #   Type: String
-  #   Description: Llave KMS con la que esta cifrado el secreto
-  #
-  # Autorizador de Cognito, opcional (docs/recursos-otra-cuenta.md seccion 2).
-  # Lo consume el securityScheme comentado en openapi.yaml.
-  #
-  # CognitoUserPoolArn:
+  #   NoEcho: true
+  # DBPassword:
   #   Type: String
+  #   NoEcho: true
+  # DBPort:
+  #   Type: String
+  # DBDatabase:
+  #   Type: String
+  #   NoEcho: true
 
 Globals:
   Function:
@@ -52,22 +60,6 @@ Globals:
      AllowOrigin: "'*'"
 
 Resources:
-  #
-  # DatabaseConnectionSecret:
-  #   Type: AWS::SecretsManager::Secret
-  #   DeletionPolicy: Delete
-  #   UpdateReplacePolicy: Delete
-  #   Properties:
-  #     Description: Database connection variables
-  #     SecretString:
-  #       Fn::ToJsonString:
-  #         connectionDetails:
-  #           host: !Ref DBHost
-  #           user: !Ref DBUser
-  #           password: !Ref DBPassword
-  #           port: !Ref DBPort
-  #           database: !Ref DBDatabase
-
   API:
     Type: AWS::Serverless::Api
     Properties:
@@ -78,136 +70,179 @@ Resources:
           Parameters:
             Location: ./openapi.yaml
 
-  # Endpoints sin dependencias externas: no leen base de datos ni servicios de
-  # terceros, por eso siempre responden 200 y sirven para validar el despliegue.
-  PingFunction:
+  # CRUD de /clientes sobre la tabla y los stored procedures de sql/clientes.sql.
+  # Cada funcion llama un solo procedimiento; la logica esta en su index.mjs.
+  ListClientesFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/functions/ping
-      Handler: index.handler
-      Events:
-        ApiEvent:
-          Type: Api
-          Properties:
-            RestApiId: !Ref API
-            Path: /ping
-            Method: GET
-      Policies:
-        - AWSLambdaBasicExecutionRole
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        Format: esm
-        Minify: false
-        OutExtension:
-          - .js=.mjs
-        Target: es2020
-        Sourcemap: true
-        EntryPoints:
-          - index.mjs
-        Banner:
-          - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
-
-  InfoFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/functions/info
-      Handler: index.handler
-      Events:
-        ApiEvent:
-          Type: Api
-          Properties:
-            RestApiId: !Ref API
-            Path: /info
-            Method: GET
-      Environment:
-        Variables:
-          SERVICE_NAME: demo-api
-          SERVICE_VERSION: 1.0.0
-      Policies:
-        - AWSLambdaBasicExecutionRole
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        Format: esm
-        Minify: false
-        OutExtension:
-          - .js=.mjs
-        Target: es2020
-        Sourcemap: true
-        EntryPoints:
-          - index.mjs
-        Banner:
-          - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
-
-  EchoFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/functions/echo
-      Handler: index.handler
-      Events:
-        ApiEvent:
-          Type: Api
-          Properties:
-            RestApiId: !Ref API
-            Path: /echo
-            Method: POST
-      Policies:
-        - AWSLambdaBasicExecutionRole
-    Metadata:
-      BuildMethod: esbuild
-      BuildProperties:
-        Format: esm
-        Minify: false
-        OutExtension:
-          - .js=.mjs
-        Target: es2020
-        Sourcemap: true
-        EntryPoints:
-          - index.mjs
-        Banner:
-          - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
-
-  StatusFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: src/functions/status
+      CodeUri: src/functions/clientes/list
       Handler: index.handler
       Timeout: 30
       Events:
-        EchoEvent:
+        ApiEvent:
           Type: Api
           Properties:
             RestApiId: !Ref API
-            Path: /status
+            Path: /clientes
             Method: GET
       Environment:
         Variables:
-          DB_HOST: !Ref DBHost
-          DB_USER: !Ref DBUser
-          DB_PASSWORD: !Ref DBPassword
-          DB_PORT: !Ref DBPort
-          DB_DATABASE: !Ref DBDatabase
+          DATABASE_CONNECTION_SECRET: !Ref ReadSecretArn
       Policies:
         - AWSLambdaBasicExecutionRole
-      # Version con el secreto en Secrets Manager (misma u otra cuenta).
-      # Reemplaza las cinco variables DB_* y la lista Policies de arriba, y
-      # en src/shared/database/index.mjs se descomenta la createConnection
-      # que usa getSecret(). Ver docs/recursos-otra-cuenta.md.
-      #
-      # Environment:
-      #   Variables:
-      #     DATABASE_CONNECTION_SECRET: !Ref DatabaseSecretArn
-      # Policies:
-      #   - AWSLambdaBasicExecutionRole
-      #   - Version: 2012-10-17
-      #     Statement:
-      #       - Effect: Allow
-      #         Action: secretsmanager:GetSecretValue
-      #         Resource: !Ref DatabaseSecretArn
-      #       - Effect: Allow
-      #         Action: kms:Decrypt
-      #         Resource: !Ref DatabaseKmsKeyArn
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref ReadSecretArn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: esm
+        Minify: false
+        OutExtension:
+          - .js=.mjs
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - index.mjs
+        Banner:
+          - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+
+  CreateClienteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/clientes/create
+      Handler: index.handler
+      Timeout: 30
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref API
+            Path: /clientes
+            Method: POST
+      Environment:
+        Variables:
+          DATABASE_CONNECTION_SECRET: !Ref WriteSecretArn
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref WriteSecretArn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: esm
+        Minify: false
+        OutExtension:
+          - .js=.mjs
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - index.mjs
+        Banner:
+          - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+
+  GetClienteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/clientes/get
+      Handler: index.handler
+      Timeout: 30
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref API
+            Path: /clientes/{clienteId}
+            Method: GET
+      Environment:
+        Variables:
+          DATABASE_CONNECTION_SECRET: !Ref ReadSecretArn
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref ReadSecretArn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: esm
+        Minify: false
+        OutExtension:
+          - .js=.mjs
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - index.mjs
+        Banner:
+          - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+
+  UpdateClienteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/clientes/update
+      Handler: index.handler
+      Timeout: 30
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref API
+            Path: /clientes/{clienteId}
+            Method: PUT
+      Environment:
+        Variables:
+          DATABASE_CONNECTION_SECRET: !Ref WriteSecretArn
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref WriteSecretArn
+    Metadata:
+      BuildMethod: esbuild
+      BuildProperties:
+        Format: esm
+        Minify: false
+        OutExtension:
+          - .js=.mjs
+        Target: es2020
+        Sourcemap: true
+        EntryPoints:
+          - index.mjs
+        Banner:
+          - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+
+  DeleteClienteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/functions/clientes/delete
+      Handler: index.handler
+      Timeout: 30
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref API
+            Path: /clientes/{clienteId}
+            Method: DELETE
+      Environment:
+        Variables:
+          DATABASE_CONNECTION_SECRET: !Ref WriteSecretArn
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref WriteSecretArn
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -236,10 +271,3 @@ Outputs:
   StackName:
     Description: Nombre del stack que atiende estas rutas
     Value: !Ref AWS::StackName
-
-  #
-  # DatabaseConnectionSecretArn:
-  #   Description: ARN of the DatabaseConnectionSecret
-  #   Value: !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${DatabaseConnectionSecret}
-  #   Export:
-  #     Name: !Sub "DatabaseConnectionSecretArn-${AWS::StackName}"
