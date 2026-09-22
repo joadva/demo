@@ -1,7 +1,7 @@
 -- Tabla y stored procedures de ejemplo para el CRUD de /clientes.
 -- Ejecutar una vez contra la base de datos apuntada por DBDatabase.
 --
---   npm run db:init          # sin cliente mysql, ver docs/local-db.md
+--   node scripts/db-init.mjs  # sin cliente mysql, ver docs/local-db.md
 --   mysql -h <DBHost> -P <DBPort> -u <DBUser> -p <DBDatabase> < sql/clientes.sql
 --
 -- Cada procedimiento termina con un SELECT porque el helper callProcedure()

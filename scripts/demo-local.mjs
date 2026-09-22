@@ -3,9 +3,9 @@
 // API Gateway. Sirve para ver las reglas de validacion y los stored procedures
 // en accion desde la terminal.
 //
-//   npm run demo
+//   node --env-file-if-exists=.env.local scripts/demo-local.mjs
 //
-// Sin variables DB_* usa las credenciales del docker-compose.yaml.
+// Las credenciales salen de las variables DB_*; ver docs/local-db.md.
 import mysql from 'mysql2/promise';
 
 import { conexionLocal } from './local-db.mjs';
@@ -41,8 +41,8 @@ try {
   await prueba.end();
 } catch (err) {
   console.error(`\nNo se pudo conectar: ${err.message}`);
-  console.error('Si es la base local, levantala con: docker compose up -d');
-  console.error('Si es otra, pon sus credenciales en .env.local (ver .env.local.example)');
+  console.error('Revisa las variables DB_HOST, DB_PORT, DB_USER, DB_PASSWORD y DB_DATABASE');
+  console.error('(lo mas comodo es un archivo .env.local; ver docs/local-db.md).');
   process.exit(1);
 }
 

@@ -30,9 +30,9 @@ const credencialesDelSecreto = async () => {
 
 /**
  * Credenciales en variables de entorno. Es lo que usan los scripts locales
- * (npm run demo) y sirve de alternativa si algun dia se quiere prescindir de
- * Secrets Manager: basta desplegar con las cinco variables DB* que estan
- * comentadas en template.yaml y no definir DATABASE_CONNECTION_SECRET.
+ * (scripts/demo-local.mjs) y sirve de alternativa si algun dia se quiere
+ * prescindir de Secrets Manager: basta desplegar con las cinco variables DB*
+ * que estan comentadas en template.yaml y no definir DATABASE_CONNECTION_SECRET.
  * @return {Object} Opciones de conexion para mysql2.
  */
 const credencialesDelEntorno = () => ({

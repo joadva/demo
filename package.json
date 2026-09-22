@@ -1,14 +1,12 @@
 {
-  "name": "shared-aws-secrets",
+  "name": "Laboratory-API-SAM",
   "scripts": {
     "lint": "eslint .",
     "lint-api": "spectral lint openapi.yaml",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "portman": "portman --cliOptionsFile portman/portman-cli.json",
-    "db:init": "node --env-file-if-exists=.env.local scripts/db-init.mjs",
-    "demo": "node --env-file-if-exists=.env.local scripts/demo-local.mjs"
+    "portman": "portman --cliOptionsFile portman/portman-cli.json"
   },
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.35.0",

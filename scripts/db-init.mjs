@@ -1,11 +1,11 @@
 // Aplica sql/clientes.sql y sql/seed.sql contra la base de datos de DB_*.
-// Sirve para cualquier MySQL (local en Docker o en la nube) sin necesitar el
+// Sirve para cualquier MySQL (local o en la nube) sin necesitar el
 // cliente `mysql`, que es el unico que entiende la instruccion DELIMITER.
 //
-//   npm run db:init
-//   npm run db:init -- sql/otro.sql   # o archivos concretos
+//   node --env-file-if-exists=.env.local scripts/db-init.mjs
+//   node scripts/db-init.mjs sql/otro.sql      # o archivos concretos
 //
-// Sin variables DB_* usa las credenciales del docker-compose.yaml.
+// Las credenciales salen de las variables DB_*; ver docs/local-db.md.
 import fs from 'node:fs/promises';
 import mysql from 'mysql2/promise';
 

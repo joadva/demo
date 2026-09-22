@@ -15,7 +15,8 @@ petición la necesita.**
 
 - Tener abierto: el repo en el editor, la página de Swagger en GitHub Pages,
   la pestaña Actions del repo, y la consola de AWS en CloudFormation.
-- Tener corriendo `docker compose up -d` por si se llega al CRUD.
+- Tener a mano una base MySQL con `sql/clientes.sql` cargado, por si se llega
+  al CRUD.
 - Verificar que `npm test` pasa y que `secrets-dev` está desplegado.
 - Tener una rama nueva creada (`git checkout -b sesion-<nombre>`) para el
   ejercicio en vivo.
@@ -147,9 +148,9 @@ son la mejor lección de la sesión.
 
 ## 6. Si hay tiempo: la base de datos (10 min)
 
-Sólo si el CRUD ya está desplegado o hay Docker a la mano.
+Sólo si el CRUD ya está desplegado o hay una base MySQL a la mano.
 
-`npm run demo` con el MySQL local. Recorre la salida: 201, 409, 400, 404.
+`node scripts/demo-local.mjs` contra esa base. Recorre la salida: 201, 409, 400, 404.
 Abre `src/functions/clientes/create/index.mjs` y muestra las tres funciones:
 `normalizarCliente`, `validarCliente`, `crearCliente`. La pregunta que
 conecta con el inicio:
@@ -195,7 +196,7 @@ Ese es el método con el que API Gateway invoca a Lambda por dentro. Siempre
 es POST. El método público está arriba, en `get:`.
 
 **"¿Puedo probar en mi máquina sin subir?"** — La lógica sí (`npm test`,
-`npm run demo`). El API Gateway completo no, y a propósito: el ambiente de
+`node scripts/demo-local.mjs`). El API Gateway completo no, y a propósito: el ambiente de
 prueba real es el stack de tu PR, que es idéntico a producción.
 
 **"¿Cuánto cuesta esto?"** — En dev, prácticamente nada: Lambda y API

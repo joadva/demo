@@ -65,7 +65,7 @@ la crea → API Gateway recibe las peticiones → las Lambdas las atienden.**
 | `.github/workflows/` | El pipeline: qué corre en cada push y PR. |
 | `samconfig.ci.yaml` | Parámetros del `sam deploy` que corre el pipeline (nombre del stack, credenciales de la base). |
 | `pipeline-bootstrap.yaml` | Plantilla que crea, una sola vez por ambiente, los roles y el bucket que el pipeline necesita. |
-| `docker-compose.yaml`, `scripts/` | MySQL local y utilidades para correr el CRUD sin AWS. |
+| `scripts/` | Utilidades para cargar el SQL y correr el CRUD contra una base real sin pasar por AWS. |
 | `frontend/` | Sitio de ejemplo en Next que consume el API (destinado a su propio repositorio). |
 | `docs/` | Este manual y guías puntuales. `docs/swagger/` es la página que se publica en GitHub Pages. |
 | `eslint.config.mjs`, `vitest.config.mjs`, `.spectral.yaml` | Reglas de estilo del código, de las pruebas y del contrato OpenAPI. |
@@ -313,11 +313,13 @@ npm test              # pruebas unitarias (vitest)
 npm run coverage      # lo mismo con cobertura → docs/coverage/
 ```
 
-Para ver el CRUD con base de datos real (requiere Docker Desktop):
+Para ver el CRUD contra una base real, pon sus credenciales en las variables
+DB_HOST, DB_PORT, DB_USER, DB_PASSWORD y DB_DATABASE (por ejemplo en un
+archivo .env.local) y:
 
 ```powershell
-docker compose up -d  # MySQL con tabla, procedimientos y datos de ejemplo
-npm run demo          # invoca los cinco handlers en secuencia y muestra cada respuesta
+node scripts/db-init.mjs   # crea la tabla y los procedimientos
+node scripts/demo-local.mjs # invoca los cinco handlers y muestra cada respuesta
 ```
 
 No hace falta SAM CLI ni cuenta de AWS para nada de lo anterior. Sí hace falta

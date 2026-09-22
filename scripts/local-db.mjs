@@ -2,7 +2,7 @@
 
 /**
  * Credenciales para conectarse a la base de datos: las variables DB_* si
- * existen (por ejemplo desde .env.local), y si no, las del docker-compose.yaml.
+ * existen (por ejemplo desde .env.local), y si no, unas de desarrollo local.
  * @return {Object} Opciones para mysql.createConnection.
  */
 export const conexionLocal = () => ({
