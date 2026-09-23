@@ -63,10 +63,10 @@
                       "enabled": true
                     },
                     "minLengthFields": {
-                      "enabled": true
+                      "enabled": false
                     },
                     "maxLengthFields": {
-                      "enabled": true
+                      "enabled": false
                     }
                   }
                 ]
@@ -95,101 +95,67 @@
             }
           }
         ]
-      },
-      {
-        "openApiOperation": "GET::/clientes/{clientId}/referencias",
-        "openApiResponse": "404",
-        "variations": [
-          {
-            "name": "Not Found",
-            "tests": {
-              "contractTests": [
-                {
-                  "statusCode": {
-                    "enabled": true
-                  },
-                  "contentType": {
-                    "enabled": true
-                  },
-                  "jsonBody": {
-                    "enabled": true
-                  },
-                  "schemaValidation": {
-                    "enabled": true
-                  },
-                  "headersPresent": {
-                    "enabled": true
-                  }
-                }
-              ]
-            },
-            "overwrites": [
-              {
-                "overwriteRequestPathVariables": [
-                  {
-                    "key": "clientId",
-                    "value": "0",
-                    "overwrite": true
-                  }
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "openApiOperation": "GET::/prospectos/{prospectId}/referencias",
-        "openApiResponse": "404",
-        "variations": [
-          {
-            "name": "Not Found",
-            "tests": {
-              "contractTests": [
-                {
-                  "statusCode": {
-                    "enabled": true
-                  },
-                  "contentType": {
-                    "enabled": true
-                  },
-                  "jsonBody": {
-                    "enabled": true
-                  },
-                  "schemaValidation": {
-                    "enabled": true
-                  },
-                  "headersPresent": {
-                    "enabled": true
-                  }
-                }
-              ]
-            },
-            "overwrites": [
-              {
-                "overwriteRequestPathVariables": [
-                  {
-                    "key":"prospectId",
-                    "value": "0",
-                    "overwrite": true
-                  }
-                ]
-              }
-            ]
-          }
-        ]
       }
     ]
   },
-  "assignVariables": [],
+  "assignVariables": [
+    {
+      "openApiOperationId": "createClienteSam",
+      "collectionVariables": [
+        {
+          "responseBodyProp": "clienteId",
+          "name": "clienteId"
+        }
+      ]
+    }
+  ],
   "overwrites": [
     {
-      "openApiOperationIds": [
-        "getClientReferences"
-      ],
+      "openApiOperationId": "createClienteSam",
+      "overwriteRequestBody": [
+        {
+          "key": "nombre",
+          "value": "Portman Test",
+          "overwrite": true
+        },
+        {
+          "key": "email",
+          "value": "portman-{{$timestamp}}@demo.mx",
+          "overwrite": true
+        },
+        {
+          "key": "telefono",
+          "value": "5550001111",
+          "overwrite": true
+        }
+      ]
+    },
+    {
+      "openApiOperationId": "updateClienteSam",
+      "overwriteRequestBody": [
+        {
+          "key": "nombre",
+          "value": "Portman Test Editado",
+          "overwrite": true
+        },
+        {
+          "key": "email",
+          "value": "portman-{{$timestamp}}-edit@demo.mx",
+          "overwrite": true
+        },
+        {
+          "key": "telefono",
+          "value": "5559998888",
+          "overwrite": true
+        }
+      ]
+    },
+    {
+      "openApiOperation": "*::/clientes-sam/{clienteId}",
       "overwriteRequestPathVariables": [
         {
-          "key": "clientId",
-          "value": "1369",
+          "key": "clienteId",
+          "value": "{{clienteId}}",
           "overwrite": true
         }
       ]
@@ -202,17 +168,12 @@
     "valueReplacements": {},
     "rawReplacements": [],
     "orderOfOperations": [
-      "GET::/ping",
-      "GET::/info",
-      "POST::/echo",
-      "GET::/status",
-      "POST::/clientes",
-      "GET::/clientes",
-      "GET::/clientes/{clienteId}",
-      "PUT::/clientes/{clienteId}",
-      "DELETE::/clientes/{clienteId}"
+      "POST::/clientes-sam",
+      "GET::/clientes-sam",
+      "GET::/clientes-sam/*",
+      "PUT::/clientes-sam/*",
+      "DELETE::/clientes-sam/*"
     ],
-    "securityOverwrites": {
-    }
+    "securityOverwrites": {}
   }
 }

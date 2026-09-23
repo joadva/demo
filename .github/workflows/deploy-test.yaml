@@ -37,5 +37,5 @@ jobs:
     uses: ./.github/workflows/post-deploy-validations.yaml
     with:
       ENVIRONMENT: test
-      BASE_URL: ${{ needs.deploy-api.outputs.API_BASE_URL }}
+      STACK_NAME: secrets-test
     secrets: inherit

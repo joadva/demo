@@ -62,11 +62,11 @@ jobs:
 
   post-deploy-validations:
     name: Post-Deployment
-    needs: [deploy-api]
+    needs: [deploy-api, get-stack-name]
     uses: ./.github/workflows/post-deploy-validations.yaml
     with:
       ENVIRONMENT: dev
-      BASE_URL: ${{ needs.deploy-api.outputs.API_BASE_URL }}
+      STACK_NAME: ${{ needs.get-stack-name.outputs.STACK_NAME }}
     secrets: inherit
 
   auto-merge-dependabot-update:
