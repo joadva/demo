@@ -75,7 +75,7 @@ describe('crearCliente', () => {
 
     expect(resultado).toEqual(fila);
     expect(callProcedure).toHaveBeenCalledWith(
-        'sp_clientes_crear',
+        'sp_clientesSam_crear',
         ['Ana Ruiz', 'ana@demo.mx', '5551234567']
     );
   });
@@ -86,7 +86,7 @@ describe('crearCliente', () => {
     await crearCliente({ nombre: 'Ana Ruiz', email: 'ana@demo.mx' });
 
     expect(callProcedure).toHaveBeenCalledWith(
-        'sp_clientes_crear',
+        'sp_clientesSam_crear',
         ['Ana Ruiz', 'ana@demo.mx', null]
     );
   });
@@ -105,7 +105,7 @@ describe('handler', () => {
     expect(respuesta.statusCode).toBe(201);
     expect(JSON.parse(respuesta.body)).toEqual(fila);
     // Llega al procedimiento ya normalizado.
-    expect(callProcedure).toHaveBeenCalledWith('sp_clientes_crear', ['Ana Ruiz', 'ana@demo.mx', '5551234567']);
+    expect(callProcedure).toHaveBeenCalledWith('sp_clientesSam_crear', ['Ana Ruiz', 'ana@demo.mx', '5551234567']);
   });
 
   it('responde 400 con la lista de errores y no toca la base de datos', async () => {

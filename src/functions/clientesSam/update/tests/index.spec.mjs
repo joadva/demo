@@ -65,7 +65,7 @@ describe('actualizarCliente', () => {
 
     expect(resultado).toEqual(fila);
     expect(callProcedure).toHaveBeenCalledWith(
-        'sp_clientes_actualizar',
+        'sp_clientesSam_actualizar',
         [1, 'Ana Ruiz', 'ana@demo.mx', '5551234567']
     );
   });
@@ -93,7 +93,7 @@ describe('handler', () => {
     const respuesta = await handler(evento('1', { nombre: 'Ana Ruiz', email: 'ANA@demo.mx' }));
 
     expect(respuesta.statusCode).toBe(200);
-    expect(callProcedure).toHaveBeenCalledWith('sp_clientes_actualizar', [1, 'Ana Ruiz', 'ana@demo.mx', null]);
+    expect(callProcedure).toHaveBeenCalledWith('sp_clientesSam_actualizar', [1, 'Ana Ruiz', 'ana@demo.mx', null]);
   });
 
   it('responde 400 cuando el id de la ruta no es numerico', async () => {

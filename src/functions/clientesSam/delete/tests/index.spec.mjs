@@ -34,7 +34,7 @@ describe('eliminarCliente', () => {
     callProcedure.mockResolvedValue([{ eliminados: 1 }]);
 
     expect(await eliminarCliente(1)).toBe(1);
-    expect(callProcedure).toHaveBeenCalledWith('sp_clientes_eliminar', [1]);
+    expect(callProcedure).toHaveBeenCalledWith('sp_clientesSam_eliminar', [1]);
   });
 
   it('devuelve 0 cuando el procedimiento no regresa filas', async () => {

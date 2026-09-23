@@ -1,4 +1,4 @@
-// Ejecuta el CRUD de /clientes de punta a punta invocando los handlers reales
+// Ejecuta el CRUD de /clientes-sam de punta a punta invocando los handlers reales
 // (con Powertools y mysql2) contra la base de datos de DB_*, sin SAM CLI ni
 // API Gateway. Sirve para ver las reglas de validacion y los stored procedures
 // en accion desde la terminal.
@@ -46,11 +46,11 @@ try {
   process.exit(1);
 }
 
-const { handler: listar } = await import('../src/functions/clientes/list/index.mjs');
-const { handler: obtener } = await import('../src/functions/clientes/get/index.mjs');
-const { handler: crear } = await import('../src/functions/clientes/create/index.mjs');
-const { handler: actualizar } = await import('../src/functions/clientes/update/index.mjs');
-const { handler: eliminar } = await import('../src/functions/clientes/delete/index.mjs');
+const { handler: listar } = await import('../src/functions/clientesSam/list/index.mjs');
+const { handler: obtener } = await import('../src/functions/clientesSam/get/index.mjs');
+const { handler: crear } = await import('../src/functions/clientesSam/create/index.mjs');
+const { handler: actualizar } = await import('../src/functions/clientesSam/update/index.mjs');
+const { handler: eliminar } = await import('../src/functions/clientesSam/delete/index.mjs');
 
 // Lo minimo que los middlewares de Powertools leen del contexto de Lambda.
 const contexto = {
@@ -82,30 +82,30 @@ const invocar = async (titulo, handler, evento) => {
 const cuerpo = (objeto) => ({ body: JSON.stringify(objeto) });
 const ruta = (clienteId) => ({ pathParameters: { clienteId: String(clienteId) } });
 
-await invocar('GET /clientes?limite=5', listar, { queryStringParameters: { limite: '5' } });
+await invocar('GET /clientes-sam?limite=5', listar, { queryStringParameters: { limite: '5' } });
 
 const correo = `demo-${Date.now()}@demo.mx`;
 
-const creado = await invocar(`POST /clientes  (${correo})`, crear,
+const creado = await invocar(`POST /clientes-sam  (${correo})`, crear,
     cuerpo({ nombre: '  Pedro Paramo ', email: correo.toUpperCase(), telefono: '5550001111' }));
 
-await invocar('POST /clientes  (mismo correo -> 409)', crear,
+await invocar('POST /clientes-sam  (mismo correo -> 409)', crear,
     cuerpo({ nombre: 'Pedro Paramo', email: correo }));
 
-await invocar('POST /clientes  (rompe reglas -> 400)', crear,
+await invocar('POST /clientes-sam  (rompe reglas -> 400)', crear,
     cuerpo({ nombre: 'P', email: 'sin-arroba' }));
 
-await invocar(`GET /clientes/${creado.clienteId}`, obtener, ruta(creado.clienteId));
+await invocar(`GET /clientes-sam/${creado.clienteId}`, obtener, ruta(creado.clienteId));
 
-await invocar('GET /clientes/abc  (-> 400)', obtener, ruta('abc'));
+await invocar('GET /clientes-sam/abc  (-> 400)', obtener, ruta('abc'));
 
-await invocar(`PUT /clientes/${creado.clienteId}`, actualizar,
+await invocar(`PUT /clientes-sam/${creado.clienteId}`, actualizar,
     { ...ruta(creado.clienteId), ...cuerpo({ nombre: 'Pedro Paramo Preciado', email: correo, telefono: null }) });
 
-await invocar('GET /clientes?limite=999  (-> 400)', listar, { queryStringParameters: { limite: '999' } });
+await invocar('GET /clientes-sam?limite=999  (-> 400)', listar, { queryStringParameters: { limite: '999' } });
 
-await invocar(`DELETE /clientes/${creado.clienteId}`, eliminar, ruta(creado.clienteId));
+await invocar(`DELETE /clientes-sam/${creado.clienteId}`, eliminar, ruta(creado.clienteId));
 
-await invocar(`GET /clientes/${creado.clienteId}  (ya no existe -> 404)`, obtener, ruta(creado.clienteId));
+await invocar(`GET /clientes-sam/${creado.clienteId}  (ya no existe -> 404)`, obtener, ruta(creado.clienteId));
 
 console.log('\nListo.');

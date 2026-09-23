@@ -1,7 +1,7 @@
-# Base de datos para el CRUD de /clientes
+# Base de datos para el CRUD de /clientes-sam
 
-El CRUD de `src/functions/clientes/` necesita un MySQL con la tabla y los
-stored procedures de `sql/clientes.sql`. Hay dos escenarios:
+El CRUD de `src/functions/clientesSam/` necesita un MySQL con la tabla y los
+stored procedures de `sql/clientesSam.sql`. Hay dos escenarios:
 
 | Quiero… | Necesito |
 |---|---|
@@ -30,14 +30,14 @@ DB_DATABASE=demo
 node --env-file-if-exists=.env.local scripts/db-init.mjs
 ```
 
-Aplica `sql/clientes.sql` (tabla + 5 procedimientos) y `sql/seed.sql` (3
+Aplica `sql/clientesSam.sql` (tabla + 5 procedimientos) y `sql/seed.sql` (3
 clientes de ejemplo). Se puede repetir las veces que haga falta: los
 procedimientos se recrean y los correos ya existentes se ignoran.
 
 También acepta archivos concretos:
 
 ```powershell
-node --env-file-if-exists=.env.local scripts/db-init.mjs sql/clientes.sql
+node --env-file-if-exists=.env.local scripts/db-init.mjs sql/clientesSam.sql
 ```
 
 ## 2. Probar el CRUD completo
@@ -51,25 +51,25 @@ código que se despliega — simulando los eventos que mandaría API Gateway, y
 muestra cada respuesta:
 
 ```
-GET /clientes?limite=5
+GET /clientes-sam?limite=5
   -> 200 {"clientes":[...]}
 
-POST /clientes  (demo-1789508658596@demo.mx)
+POST /clientes-sam  (demo-1789508658596@demo.mx)
   -> 201 {"clienteId":4,"nombre":"Pedro Paramo","email":"demo-...@demo.mx",...}
 
-POST /clientes  (mismo correo -> 409)
+POST /clientes-sam  (mismo correo -> 409)
   -> 409 {"message":"Ya existe un cliente con ese correo"}
 
-POST /clientes  (rompe reglas -> 400)
+POST /clientes-sam  (rompe reglas -> 400)
   -> 400 {"message":"Datos invalidos","errores":[{"campo":"nombre",...},{"campo":"email",...}]}
 
-GET /clientes/abc  (-> 400)
+GET /clientes-sam/abc  (-> 400)
   -> 400 {"message":"Datos invalidos","errores":[{"campo":"clienteId","mensaje":"Debe ser un entero positivo"}]}
 ...
-DELETE /clientes/4
+DELETE /clientes-sam/4
   -> 204 null
 
-GET /clientes/4  (ya no existe -> 404)
+GET /clientes-sam/4  (ya no existe -> 404)
   -> 404 {"message":"Cliente no encontrado"}
 ```
 

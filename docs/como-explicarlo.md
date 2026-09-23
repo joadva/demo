@@ -15,7 +15,7 @@ petición la necesita.**
 
 - Tener abierto: el repo en el editor, la página de Swagger en GitHub Pages,
   la pestaña Actions del repo, y la consola de AWS en CloudFormation.
-- Tener a mano una base MySQL con `sql/clientes.sql` cargado, por si se llega
+- Tener a mano una base MySQL con `sql/clientesSam.sql` cargado, por si se llega
   al CRUD.
 - Verificar que `npm test` pasa y que `secrets-dev` está desplegado.
 - Tener una rama nueva creada (`git checkout -b sesion-<nombre>`) para el
@@ -151,7 +151,7 @@ son la mejor lección de la sesión.
 Sólo si el CRUD ya está desplegado o hay una base MySQL a la mano.
 
 `node scripts/demo-local.mjs` contra esa base. Recorre la salida: 201, 409, 400, 404.
-Abre `src/functions/clientes/create/index.mjs` y muestra las tres funciones:
+Abre `src/functions/clientesSam/create/index.mjs` y muestra las tres funciones:
 `normalizarCliente`, `validarCliente`, `crearCliente`. La pregunta que
 conecta con el inicio:
 

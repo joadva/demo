@@ -68,6 +68,6 @@ export const validarCliente = ({ nombre, email }) => {
  * @return {Promise<Object|null>} The created cliente.
  */
 export const crearCliente = async ({ nombre, email, telefono = null }) => {
-  const [cliente] = await callProcedure('sp_clientes_crear', [nombre, email, telefono]);
+  const [cliente] = await callProcedure('sp_clientesSam_crear', [nombre, email, telefono]);
   return cliente ?? null;
 };

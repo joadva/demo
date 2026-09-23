@@ -44,7 +44,7 @@ describe('obtenerCliente', () => {
     const resultado = await obtenerCliente(1);
 
     expect(resultado).toEqual(fila);
-    expect(callProcedure).toHaveBeenCalledWith('sp_clientes_obtener', [1]);
+    expect(callProcedure).toHaveBeenCalledWith('sp_clientesSam_obtener', [1]);
   });
 
   it('devuelve null cuando el procedimiento no regresa filas', async () => {

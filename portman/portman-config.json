@@ -100,7 +100,7 @@
   },
   "assignVariables": [
     {
-      "openApiOperationId": "createCliente",
+      "openApiOperationId": "createClienteSam",
       "collectionVariables": [
         {
           "responseBodyProp": "clienteId",
@@ -111,7 +111,7 @@
   ],
   "overwrites": [
     {
-      "openApiOperationId": "createCliente",
+      "openApiOperationId": "createClienteSam",
       "overwriteRequestBody": [
         {
           "key": "nombre",
@@ -131,7 +131,7 @@
       ]
     },
     {
-      "openApiOperationId": "updateCliente",
+      "openApiOperationId": "updateClienteSam",
       "overwriteRequestBody": [
         {
           "key": "nombre",
@@ -151,7 +151,7 @@
       ]
     },
     {
-      "openApiOperation": "*::/clientes/{clienteId}",
+      "openApiOperation": "*::/clientes-sam/{clienteId}",
       "overwriteRequestPathVariables": [
         {
           "key": "clienteId",
@@ -168,11 +168,11 @@
     "valueReplacements": {},
     "rawReplacements": [],
     "orderOfOperations": [
-      "POST::/clientes",
-      "GET::/clientes",
-      "GET::/clientes/*",
-      "PUT::/clientes/*",
-      "DELETE::/clientes/*"
+      "POST::/clientes-sam",
+      "GET::/clientes-sam",
+      "GET::/clientes-sam/*",
+      "PUT::/clientes-sam/*",
+      "DELETE::/clientes-sam/*"
     ],
     "securityOverwrites": {}
   }

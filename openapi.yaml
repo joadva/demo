@@ -7,8 +7,8 @@ info:
     name: Demo
 
 tags:
-  - name: Clientes
-    description: CRUD de ejemplo sobre la tabla clientes vía stored procedures
+  - name: ClientesSam
+    description: CRUD de ejemplo sobre la tabla clientesSam vía stored procedures
 
 servers:
 
@@ -44,15 +44,15 @@ x-amazon-apigateway-gateway-responses:
       gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
 
 paths:
-  /clientes:
+  /clientes-sam:
     get:
       summary: List clientes
-      operationId: listClientes
+      operationId: listClientesSam
       description: |
-        Returns a paginated list of clientes via the sp_clientes_listar
+        Returns a paginated list of clientes via the sp_clientesSam_listar
         stored procedure.
       tags:
-        - Clientes
+        - ClientesSam
       parameters:
         - name: limite
           in: query
@@ -117,18 +117,18 @@ paths:
       x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListClientesFunction.Arn}/invocations
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListClientesSamFunction.Arn}/invocations
         httpMethod: POST
         type: aws_proxy
 
     post:
       summary: Create a cliente
-      operationId: createCliente
+      operationId: createClienteSam
       description: |
-        Creates a cliente via the sp_clientes_crear stored procedure and
+        Creates a cliente via the sp_clientesSam_crear stored procedure and
         returns the resulting row.
       tags:
-        - Clientes
+        - ClientesSam
       requestBody:
         required: true
         content:
@@ -196,11 +196,11 @@ paths:
       x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateClienteFunction.Arn}/invocations
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateClienteSamFunction.Arn}/invocations
         httpMethod: POST
         type: aws_proxy
 
-  /clientes/{clienteId}:
+  /clientes-sam/{clienteId}:
     parameters:
       - name: clienteId
         in: path
@@ -213,11 +213,11 @@ paths:
 
     get:
       summary: Get a cliente
-      operationId: getCliente
+      operationId: getClienteSam
       description: |
-        Returns a single cliente via the sp_clientes_obtener stored procedure.
+        Returns a single cliente via the sp_clientesSam_obtener stored procedure.
       tags:
-        - Clientes
+        - ClientesSam
       responses:
         '200':
           description: 'Success'
@@ -257,18 +257,18 @@ paths:
       x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetClienteFunction.Arn}/invocations
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetClienteSamFunction.Arn}/invocations
         httpMethod: POST
         type: aws_proxy
 
     put:
       summary: Update a cliente
-      operationId: updateCliente
+      operationId: updateClienteSam
       description: |
         Replaces the editable fields of a cliente via the
-        sp_clientes_actualizar stored procedure.
+        sp_clientesSam_actualizar stored procedure.
       tags:
-        - Clientes
+        - ClientesSam
       requestBody:
         required: true
         content:
@@ -338,17 +338,17 @@ paths:
       x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateClienteFunction.Arn}/invocations
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateClienteSamFunction.Arn}/invocations
         httpMethod: POST
         type: aws_proxy
 
     delete:
       summary: Delete a cliente
-      operationId: deleteCliente
+      operationId: deleteClienteSam
       description: |
-        Deletes a cliente via the sp_clientes_eliminar stored procedure.
+        Deletes a cliente via the sp_clientesSam_eliminar stored procedure.
       tags:
-        - Clientes
+        - ClientesSam
       responses:
         '204':
           description: 'No Content'
@@ -361,7 +361,7 @@ paths:
       x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteClienteFunction.Arn}/invocations
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteClienteSamFunction.Arn}/invocations
         httpMethod: POST
         type: aws_proxy
 

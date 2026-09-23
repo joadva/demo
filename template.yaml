@@ -70,12 +70,12 @@ Resources:
           Parameters:
             Location: ./openapi.yaml
 
-  # CRUD de /clientes sobre la tabla y los stored procedures de sql/clientes.sql.
+  # CRUD de /clientes-sam sobre la tabla y los stored procedures de sql/clientesSam.sql.
   # Cada funcion llama un solo procedimiento; la logica esta en su index.mjs.
-  ListClientesFunction:
+  ListClientesSamFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/functions/clientes/list
+      CodeUri: src/functions/clientesSam/list
       Handler: index.handler
       Timeout: 30
       Events:
@@ -83,7 +83,7 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref API
-            Path: /clientes
+            Path: /clientes-sam
             Method: GET
       Environment:
         Variables:
@@ -109,10 +109,10 @@ Resources:
         Banner:
           - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 
-  CreateClienteFunction:
+  CreateClienteSamFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/functions/clientes/create
+      CodeUri: src/functions/clientesSam/create
       Handler: index.handler
       Timeout: 30
       Events:
@@ -120,7 +120,7 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref API
-            Path: /clientes
+            Path: /clientes-sam
             Method: POST
       Environment:
         Variables:
@@ -146,10 +146,10 @@ Resources:
         Banner:
           - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 
-  GetClienteFunction:
+  GetClienteSamFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/functions/clientes/get
+      CodeUri: src/functions/clientesSam/get
       Handler: index.handler
       Timeout: 30
       Events:
@@ -157,7 +157,7 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref API
-            Path: /clientes/{clienteId}
+            Path: /clientes-sam/{clienteId}
             Method: GET
       Environment:
         Variables:
@@ -183,10 +183,10 @@ Resources:
         Banner:
           - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 
-  UpdateClienteFunction:
+  UpdateClienteSamFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/functions/clientes/update
+      CodeUri: src/functions/clientesSam/update
       Handler: index.handler
       Timeout: 30
       Events:
@@ -194,7 +194,7 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref API
-            Path: /clientes/{clienteId}
+            Path: /clientes-sam/{clienteId}
             Method: PUT
       Environment:
         Variables:
@@ -220,10 +220,10 @@ Resources:
         Banner:
           - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 
-  DeleteClienteFunction:
+  DeleteClienteSamFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/functions/clientes/delete
+      CodeUri: src/functions/clientesSam/delete
       Handler: index.handler
       Timeout: 30
       Events:
@@ -231,7 +231,7 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref API
-            Path: /clientes/{clienteId}
+            Path: /clientes-sam/{clienteId}
             Method: DELETE
       Environment:
         Variables:

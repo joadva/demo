@@ -14,15 +14,15 @@ export const handler = initializePowertools(async (event) => {
       });
     }
 
-    const eliminados = await eliminarCliente(clienteId);
+    const cliente = await obtenerCliente(clienteId);
 
-    if (eliminados === 0) {
+    if (!cliente) {
       return getResponse(404, { message: 'Cliente no encontrado' });
     }
 
-    return getResponse(204);
+    return getResponse(200, cliente);
   } catch (err) {
-    logger.error('Error al eliminar el cliente', err);
+    logger.error('Error al obtener el cliente', err);
     return getResponse(500, { message: 'Something went wrong!' });
   }
 });
@@ -38,11 +38,11 @@ export const validarClienteId = (valor) => {
 };
 
 /**
- * Deletes a cliente.
+ * Returns a single cliente.
  * @param {number} clienteId - Identifier of the cliente.
- * @return {Promise<number>} How many rows were deleted: 1 or 0.
+ * @return {Promise<Object|null>} The cliente, or null when it does not exist.
  */
-export const eliminarCliente = async (clienteId) => {
-  const [resultado] = await callProcedure('sp_clientes_eliminar', [clienteId]);
-  return resultado?.eliminados ?? 0;
+export const obtenerCliente = async (clienteId) => {
+  const [cliente] = await callProcedure('sp_clientesSam_obtener', [clienteId]);
+  return cliente ?? null;
 };

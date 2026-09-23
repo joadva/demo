@@ -49,8 +49,8 @@ export const validarPaginacion = ({ limite = '50', offset = '0' }) => {
  * Returns a page of clientes.
  * @param {number} limite - Maximum number of rows to return.
  * @param {number} offset - Number of rows to skip.
- * @return {Promise<Array>} Rows returned by sp_clientes_listar.
+ * @return {Promise<Array>} Rows returned by sp_clientesSam_listar.
  */
 export const listarClientes = async (limite, offset) => {
-  return callProcedure('sp_clientes_listar', [limite, offset]);
+  return callProcedure('sp_clientesSam_listar', [limite, offset]);
 };

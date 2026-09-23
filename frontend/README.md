@@ -5,8 +5,8 @@ Muestra cómo un frontend se conecta al API desplegado con SAM desde
 
 - `/` — explica los tres pasos de la conexión y prueba en vivo `/ping`,
   `/info` y `/echo` (incluido un 400 del gateway).
-- `/clientes/` — CRUD completo con errores por campo. Necesita las rutas
-  `/clientes` desplegadas y con base de datos (`docs/clientes-example.md` del
+- `/clientes-sam/` — CRUD completo con errores por campo. Necesita las rutas
+  `/clientes-sam` desplegadas y con base de datos (`docs/clientes-example.md` del
   backend).
 
 Es un sitio estático (`output: 'export'`): no hay servidor de Next, el
@@ -31,12 +31,12 @@ JSON y convierte cualquier respuesta no-2xx en un `ApiError` que unifica las
 dos formas del 400 del backend:
 
 ```js
-import { listClientes, createCliente, ApiError } from '@/lib/api';
+import { listClientesSam, createClienteSam, ApiError } from '@/lib/api';
 
-const { clientes } = await listClientes();
+const { clientes } = await listClientesSam();
 
 try {
-  await createCliente({ nombre: 'Ana', email: 'ana@demo.mx' });
+  await createClienteSam({ nombre: 'Ana', email: 'ana@demo.mx' });
 } catch (err) {
   if (err instanceof ApiError) {
     err.status;     // 400, 404, 409, 500

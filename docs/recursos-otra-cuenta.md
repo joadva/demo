@@ -156,7 +156,7 @@ components:
 ```
 
 ```yaml
-  /clientes:
+  /clientes-sam:
     get:
       security:
         - cognitoAuth: []

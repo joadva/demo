@@ -90,6 +90,6 @@ export const validarCliente = ({ nombre, email }) => {
  * @return {Promise<Object|null>} The updated cliente, or null when it does not exist.
  */
 export const actualizarCliente = async (clienteId, { nombre, email, telefono = null }) => {
-  const [cliente] = await callProcedure('sp_clientes_actualizar', [clienteId, nombre, email, telefono]);
+  const [cliente] = await callProcedure('sp_clientesSam_actualizar', [clienteId, nombre, email, telefono]);
   return cliente ?? null;
 };

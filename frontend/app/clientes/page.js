@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { ApiError, createCliente, deleteCliente, listClientes, updateCliente } from '@/lib/api';
+import { ApiError, createClienteSam, deleteClienteSam, listClientesSam, updateClienteSam } from '@/lib/api';
 
 const VACIO = { nombre: '', email: '', telefono: '' };
 
@@ -17,7 +17,7 @@ export default function Clientes() {
   const cargar = useCallback(async () => {
     setCargando(true);
     try {
-      const { clientes } = await listClientes();
+      const { clientes } = await listClientesSam();
       setClientes(clientes);
       setEstado(null);
     } catch (err) {
@@ -53,10 +53,10 @@ export default function Clientes() {
 
     try {
       if (editando === null) {
-        await createCliente(datos);
+        await createClienteSam(datos);
         setEstado({ tipo: 'ok', texto: 'Cliente creado' });
       } else {
-        await updateCliente(editando, datos);
+        await updateClienteSam(editando, datos);
         setEstado({ tipo: 'ok', texto: 'Cliente actualizado' });
       }
       cancelar();
@@ -73,7 +73,7 @@ export default function Clientes() {
   const borrar = async (cliente) => {
     if (!confirm(`¿Borrar a ${cliente.nombre}?`)) return;
     try {
-      await deleteCliente(cliente.clienteId);
+      await deleteClienteSam(cliente.clienteId);
       setEstado({ tipo: 'ok', texto: 'Cliente borrado' });
       await cargar();
     } catch (err) {
@@ -89,10 +89,10 @@ export default function Clientes() {
 
   return (
     <>
-      <h1>Clientes</h1>
+      <h1>Clientes (SAM)</h1>
       <p className="suave">
-        CRUD completo contra <code>/clientes</code>. Requiere que esas rutas estén
-        desplegadas y con base de datos (ver <code>docs/clientes-example.md</code>).
+        CRUD completo contra <code>/clientes-sam</code>. Requiere que la base de datos
+        tenga la tabla y los procedimientos de <code>sql/clientesSam.sql</code>.
       </p>
 
       <section className="tarjeta">
@@ -168,7 +168,7 @@ const describir = (err) => {
   if (!(err instanceof ApiError)) return err.message;
   // API Gateway responde asi (no con 404) cuando la ruta no existe en el API.
   if (err.status === 403 && err.message === 'Missing Authentication Token') {
-    return 'El API no tiene las rutas /clientes desplegadas todavía.';
+    return 'El API no tiene las rutas /clientes-sam desplegadas todavía.';
   }
   // El detalle viene de API Gateway cuando el cuerpo no cumple el schema.
   return err.detalle ? `${err.message}: ${err.detalle}` : `${err.status} ${err.message}`;

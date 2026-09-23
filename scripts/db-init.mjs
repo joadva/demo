@@ -1,4 +1,4 @@
-// Aplica sql/clientes.sql y sql/seed.sql contra la base de datos de DB_*.
+// Aplica sql/clientesSam.sql y sql/seed.sql contra la base de datos de DB_*.
 // Sirve para cualquier MySQL (local o en la nube) sin necesitar el
 // cliente `mysql`, que es el unico que entiende la instruccion DELIMITER.
 //
@@ -13,7 +13,7 @@ import { conexionLocal, separarSentencias } from './local-db.mjs';
 
 const archivos = process.argv.slice(2);
 if (archivos.length === 0) {
-  archivos.push('sql/clientes.sql', 'sql/seed.sql');
+  archivos.push('sql/clientesSam.sql', 'sql/seed.sql');
 }
 
 const { host, port, database } = conexionLocal();

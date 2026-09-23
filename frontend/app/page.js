@@ -1,7 +1,7 @@
 'use client';
 
 import Prueba from '@/components/Prueba';
-import { BASE_URL, echo, info, ping } from '@/lib/api';
+import { BASE_URL, createClienteSam, listClientesSam } from '@/lib/api';
 
 export default function Inicio() {
   return (
@@ -9,7 +9,7 @@ export default function Inicio() {
       <h1>Cómo conectar este frontend con el API</h1>
       <p className="suave">
         Tres pasos: conseguir la URL del API, ponerla en <code>.env.local</code> y llamar
-        con <code>lib/api.js</code>. Abajo cada endpoint se puede probar en vivo.
+        con <code>lib/api.js</code>. Abajo se puede probar en vivo.
       </p>
 
       {BASE_URL ? (
@@ -40,13 +40,8 @@ aws cloudformation describe-stacks --stack-name secrets-dev \\
         Next sólo expone al navegador las variables que empiezan con <code>NEXT_PUBLIC_</code>,
         y las incrusta al compilar. Este script escribe <code>.env.local</code>:
       </p>
-      <pre><code>{`cd frontend
-npm run env:aws        # lee ../aws-exports.json y escribe .env.local
+      <pre><code>{`npm run env:aws        # lee ../aws-exports.json y escribe .env.local
 npm run dev            # http://localhost:3000`}</code></pre>
-      <p>
-        En CI es lo mismo con <code>actions/download-artifact</code> antes de{' '}
-        <code>npm run build</code>; ver <code>frontend/README.md</code>.
-      </p>
 
       <h2>3. Llamar al API</h2>
       <p>
@@ -57,29 +52,29 @@ npm run dev            # http://localhost:3000`}</code></pre>
       </p>
 
       <Prueba
-        titulo="GET /ping — ¿está vivo el API?"
-        codigo={`import { ping } from '@/lib/api';\nconst { message, timestamp } = await ping();`}
-        accion={ping}
+        titulo="GET /clientes-sam — listar"
+        codigo={`import { listClientesSam } from '@/lib/api';\nconst { clientes } = await listClientesSam(5, 0);`}
+        accion={() => listClientesSam(5, 0)}
       />
 
       <Prueba
-        titulo="GET /info — nombre, versión y región"
-        codigo={`import { info } from '@/lib/api';\nconst { service, version, region } = await info();`}
-        accion={info}
+        titulo="POST /clientes-sam sin correo — así se ve un 400 del gateway"
+        codigo={`// email es requerido en el schema (openapi.yaml), así que API Gateway\n// rechaza el cuerpo antes de invocar la Lambda. Responde { message, detalle }.\nawait createClienteSam({ nombre: 'Sin correo' });`}
+        accion={() => createClienteSam({ nombre: 'Sin correo' })}
+        etiqueta="Provocar 400 del gateway"
       />
 
       <Prueba
-        titulo="POST /echo — mandar un cuerpo JSON"
-        codigo={`import { echo } from '@/lib/api';\nconst { receivedAt, payload } = await echo({ mensaje: 'hola' });`}
-        accion={() => echo({ mensaje: 'hola', desde: 'next' })}
+        titulo="POST /clientes-sam con correo inválido — un 400 de la Lambda"
+        codigo={`// El schema deja pasar cualquier cadena de 3 caracteres o más: API Gateway\n// ignora format: email. La regla vive en la Lambda, que responde\n// { message, errores: [{ campo, mensaje }] }.\nawait createClienteSam({ nombre: 'Ana Ruiz', email: 'sin-arroba' });`}
+        accion={() => createClienteSam({ nombre: 'Ana Ruiz', email: 'sin-arroba' })}
+        etiqueta="Provocar 400 de la Lambda"
       />
 
-      <Prueba
-        titulo="POST /echo con cuerpo inválido — así se ve un 400 del gateway"
-        codigo={`// mensaje debe ser string y de máximo 500 caracteres (openapi.yaml).\n// API Gateway lo rechaza antes de invocar la Lambda.\nawait echo({ mensaje: 12345 });`}
-        accion={() => echo({ mensaje: 12345 })}
-        etiqueta="Provocar 400"
-      />
+      <p className="suave">
+        Las dos pruebas de 400 funcionan aunque la base de datos no esté lista: ninguna
+        llega a consultar MySQL. El listado sí la necesita.
+      </p>
     </>
   );
 }

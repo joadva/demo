@@ -1,15 +1,15 @@
-# Referencia: CRUD de /clientes sobre stored procedures
+# Referencia: CRUD de /clientes-sam sobre stored procedures
 
-El CRUD de `/clientes` **esta desplegado**: sus rutas viven en `openapi.yaml`
+El CRUD de `/clientes-sam` **esta desplegado**: sus rutas viven en `openapi.yaml`
 y sus cinco funciones en `template.yaml`. Este documento se queda como
 referencia de los bloques completos (por si hay que rehacerlos o copiarlos a
 otro proyecto) y, sobre todo, por las secciones 5 y 6: que valida cada capa y
 como se configura Portman.
 
-- `src/functions/clientes/` — los 5 handlers, cada uno con sus funciones de
+- `src/functions/clientesSam/` — los 5 handlers, cada uno con sus funciones de
   validación y de acceso a datos en el mismo `index.mjs`, y sus pruebas en
   `tests/` (reglas, procedimiento y handler completo)
-- `sql/clientes.sql` — la tabla y los 5 stored procedures
+- `sql/clientesSam.sql` — la tabla y los 5 stored procedures
 - `sql/seed.sql` — tres clientes de ejemplo
 
 Para levantar la base ver `docs/local-db.md`.
@@ -21,8 +21,8 @@ Para levantar la base ver `docs/local-db.md`.
 Va dentro de `tags:`, junto a `Tool`.
 
 ```yaml
-  - name: Clientes
-    description: CRUD de ejemplo sobre la tabla clientes vía stored procedures
+  - name: ClientesSam
+    description: CRUD de ejemplo sobre la tabla clientesSam vía stored procedures
 ```
 
 ## 2. `openapi.yaml` — las rutas
@@ -30,15 +30,15 @@ Va dentro de `tags:`, junto a `Tool`.
 Van dentro de `paths:`, después de `/echo`.
 
 ```yaml
-  /clientes:
+  /clientes-sam:
     get:
       summary: List clientes
-      operationId: listClientes
+      operationId: listClientesSam
       description: |
-        Returns a paginated list of clientes via the sp_clientes_listar
+        Returns a paginated list of clientes via the sp_clientesSam_listar
         stored procedure.
       tags:
-        - Clientes
+        - ClientesSam
       parameters:
         - name: limite
           in: query
@@ -103,18 +103,18 @@ Van dentro de `paths:`, después de `/echo`.
       x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListClientesFunction.Arn}/invocations
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListClientesSamFunction.Arn}/invocations
         httpMethod: POST
         type: aws_proxy
 
     post:
       summary: Create a cliente
-      operationId: createCliente
+      operationId: createClienteSam
       description: |
-        Creates a cliente via the sp_clientes_crear stored procedure and
+        Creates a cliente via the sp_clientesSam_crear stored procedure and
         returns the resulting row.
       tags:
-        - Clientes
+        - ClientesSam
       requestBody:
         required: true
         content:
@@ -182,11 +182,11 @@ Van dentro de `paths:`, después de `/echo`.
       x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateClienteFunction.Arn}/invocations
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateClienteSamFunction.Arn}/invocations
         httpMethod: POST
         type: aws_proxy
 
-  /clientes/{clienteId}:
+  /clientes-sam/{clienteId}:
     parameters:
       - name: clienteId
         in: path
@@ -199,11 +199,11 @@ Van dentro de `paths:`, después de `/echo`.
 
     get:
       summary: Get a cliente
-      operationId: getCliente
+      operationId: getClienteSam
       description: |
-        Returns a single cliente via the sp_clientes_obtener stored procedure.
+        Returns a single cliente via the sp_clientesSam_obtener stored procedure.
       tags:
-        - Clientes
+        - ClientesSam
       responses:
         '200':
           description: 'Success'
@@ -243,18 +243,18 @@ Van dentro de `paths:`, después de `/echo`.
       x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetClienteFunction.Arn}/invocations
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetClienteSamFunction.Arn}/invocations
         httpMethod: POST
         type: aws_proxy
 
     put:
       summary: Update a cliente
-      operationId: updateCliente
+      operationId: updateClienteSam
       description: |
         Replaces the editable fields of a cliente via the
-        sp_clientes_actualizar stored procedure.
+        sp_clientesSam_actualizar stored procedure.
       tags:
-        - Clientes
+        - ClientesSam
       requestBody:
         required: true
         content:
@@ -324,17 +324,17 @@ Van dentro de `paths:`, después de `/echo`.
       x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateClienteFunction.Arn}/invocations
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateClienteSamFunction.Arn}/invocations
         httpMethod: POST
         type: aws_proxy
 
     delete:
       summary: Delete a cliente
-      operationId: deleteCliente
+      operationId: deleteClienteSam
       description: |
-        Deletes a cliente via the sp_clientes_eliminar stored procedure.
+        Deletes a cliente via the sp_clientesSam_eliminar stored procedure.
       tags:
-        - Clientes
+        - ClientesSam
       responses:
         '204':
           description: 'No Content'
@@ -347,7 +347,7 @@ Van dentro de `paths:`, después de `/echo`.
       x-amazon-apigateway-request-validator: Validate body, query string parameters, and headers
       x-amazon-apigateway-integration:
         uri:
-          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteClienteFunction.Arn}/invocations
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteClienteSamFunction.Arn}/invocations
         httpMethod: POST
         type: aws_proxy
 ```
@@ -422,10 +422,10 @@ Van dentro de `components.responses:`, junto a `unexpectedError`.
 Van dentro de `Resources:`, después de `StatusFunction`.
 
 ```yaml
-  ListClientesFunction:
+  ListClientesSamFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/functions/clientes/list
+      CodeUri: src/functions/clientesSam/list
       Handler: index.handler
       Timeout: 30
       Events:
@@ -433,7 +433,7 @@ Van dentro de `Resources:`, después de `StatusFunction`.
           Type: Api
           Properties:
             RestApiId: !Ref API
-            Path: /clientes
+            Path: /clientes-sam
             Method: GET
       Environment:
         Variables:
@@ -458,10 +458,10 @@ Van dentro de `Resources:`, después de `StatusFunction`.
         Banner:
           - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 
-  GetClienteFunction:
+  GetClienteSamFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/functions/clientes/get
+      CodeUri: src/functions/clientesSam/get
       Handler: index.handler
       Timeout: 30
       Events:
@@ -469,7 +469,7 @@ Van dentro de `Resources:`, después de `StatusFunction`.
           Type: Api
           Properties:
             RestApiId: !Ref API
-            Path: /clientes/{clienteId}
+            Path: /clientes-sam/{clienteId}
             Method: GET
       Environment:
         Variables:
@@ -494,10 +494,10 @@ Van dentro de `Resources:`, después de `StatusFunction`.
         Banner:
           - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 
-  CreateClienteFunction:
+  CreateClienteSamFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/functions/clientes/create
+      CodeUri: src/functions/clientesSam/create
       Handler: index.handler
       Timeout: 30
       Events:
@@ -505,7 +505,7 @@ Van dentro de `Resources:`, después de `StatusFunction`.
           Type: Api
           Properties:
             RestApiId: !Ref API
-            Path: /clientes
+            Path: /clientes-sam
             Method: POST
       Environment:
         Variables:
@@ -530,10 +530,10 @@ Van dentro de `Resources:`, después de `StatusFunction`.
         Banner:
           - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 
-  UpdateClienteFunction:
+  UpdateClienteSamFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/functions/clientes/update
+      CodeUri: src/functions/clientesSam/update
       Handler: index.handler
       Timeout: 30
       Events:
@@ -541,7 +541,7 @@ Van dentro de `Resources:`, después de `StatusFunction`.
           Type: Api
           Properties:
             RestApiId: !Ref API
-            Path: /clientes/{clienteId}
+            Path: /clientes-sam/{clienteId}
             Method: PUT
       Environment:
         Variables:
@@ -566,10 +566,10 @@ Van dentro de `Resources:`, después de `StatusFunction`.
         Banner:
           - js=import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 
-  DeleteClienteFunction:
+  DeleteClienteSamFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/functions/clientes/delete
+      CodeUri: src/functions/clientesSam/delete
       Handler: index.handler
       Timeout: 30
       Events:
@@ -577,7 +577,7 @@ Van dentro de `Resources:`, después de `StatusFunction`.
           Type: Api
           Properties:
             RestApiId: !Ref API
-            Path: /clientes/{clienteId}
+            Path: /clientes-sam/{clienteId}
             Method: DELETE
       Environment:
         Variables:
@@ -646,9 +646,9 @@ las cinco operaciones para que se prueben en un solo recorrido.
 En `portman/portman-config.json`:
 
 - **`globals.orderOfOperations`** pone el POST primero, porque los demás
-  necesitan un cliente existente: `POST /clientes` → `GET /clientes` →
-  `GET /clientes/{clienteId}` → `PUT /clientes/{clienteId}` →
-  `DELETE /clientes/{clienteId}`. El DELETE al final deja la tabla como estaba.
+  necesitan un cliente existente: `POST /clientes-sam` → `GET /clientes-sam` →
+  `GET /clientes-sam/{clienteId}` → `PUT /clientes-sam/{clienteId}` →
+  `DELETE /clientes-sam/{clienteId}`. El DELETE al final deja la tabla como estaba.
 - **`assignVariables`** guarda el `clienteId` que devuelve el POST en una
   variable de colección.
 - **`overwrites`** hace dos cosas. Inyecta ese `{{clienteId}}` en las rutas con

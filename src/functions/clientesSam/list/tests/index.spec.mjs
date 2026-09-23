@@ -58,7 +58,7 @@ describe('listarClientes', () => {
     const resultado = await listarClientes(50, 0);
 
     expect(resultado).toEqual([fila]);
-    expect(callProcedure).toHaveBeenCalledWith('sp_clientes_listar', [50, 0]);
+    expect(callProcedure).toHaveBeenCalledWith('sp_clientesSam_listar', [50, 0]);
   });
 
   it('devuelve un arreglo vacio cuando no hay clientes', async () => {
@@ -86,7 +86,7 @@ describe('handler', () => {
 
     expect(respuesta.statusCode).toBe(200);
     expect(JSON.parse(respuesta.body)).toEqual({ clientes: [fila] });
-    expect(callProcedure).toHaveBeenCalledWith('sp_clientes_listar', [10, 20]);
+    expect(callProcedure).toHaveBeenCalledWith('sp_clientesSam_listar', [10, 20]);
   });
 
   it('usa los valores por omision cuando no hay query string', async () => {
@@ -94,7 +94,7 @@ describe('handler', () => {
 
     await handler({});
 
-    expect(callProcedure).toHaveBeenCalledWith('sp_clientes_listar', [50, 0]);
+    expect(callProcedure).toHaveBeenCalledWith('sp_clientesSam_listar', [50, 0]);
   });
 
   it('responde 400 con un limite fuera de rango y no toca la base de datos', async () => {

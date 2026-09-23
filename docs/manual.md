@@ -74,22 +74,22 @@ la crea → API Gateway recibe las peticiones → las Lambdas las atienden.**
 
 ## 3. Cómo viaja una petición
 
-Tomemos `POST /clientes` con `{ "nombre": "Ana", "email": "ana@demo.mx" }`.
+Tomemos `POST /clientes-sam` con `{ "nombre": "Ana", "email": "ana@demo.mx" }`.
 
 ```
 navegador ──HTTPS──▶ API Gateway ──evento JSON──▶ Lambda ──CALL sp──▶ MySQL
                         │                          │
-                        │ 1. ¿existe POST /clientes?  (openapi.yaml)
+                        │ 1. ¿existe POST /clientes-sam?  (openapi.yaml)
                         │ 2. ¿el cuerpo cumple el schema?  (request validator)
                         │    no → 400 { message, detalle }  y la Lambda NUNCA corre
                         │
-                        └─▶ 3. invoca CreateClienteFunction con un "evento":
+                        └─▶ 3. invoca CreateClienteSamFunction con un "evento":
                                { body: '{"nombre":...}', pathParameters, queryStringParameters, headers, ... }
                                                            │
                                4. handler(evento):         │
                                   - normaliza y valida reglas de negocio
                                     no → 400 { message, errores: [{ campo, mensaje }] }
-                                  - callProcedure('sp_clientes_crear', [...])
+                                  - callProcedure('sp_clientesSam_crear', [...])
                                   - devuelve { statusCode: 201, body: '{"clienteId":4,...}' }
                                                            │
                         ◀── 5. API Gateway convierte ese objeto en la respuesta HTTP
@@ -113,7 +113,7 @@ Tres cosas que conviene fijar desde el principio:
 Una Lambda son cuatro archivos que se corresponden entre sí. Se explica con
 `/ping` porque es la más pequeña que existe: su código y sus pruebas están en
 `src/functions/ping/`, aunque hoy no se despliega (el API sólo expone
-`/clientes`, ver sección 7). El bloque de `template.yaml` de abajo es el que
+`/clientes-sam`, ver sección 7). El bloque de `template.yaml` de abajo es el que
 habría que agregar para publicarla.
 
 ### 4.1 El código — `src/functions/ping/index.mjs`
@@ -218,7 +218,7 @@ it('responde pong', () => {
 
 Las Lambdas que tocan la base simulan `callProcedure` con `vi.mock`, y las que
 quieren probar el `handler` completo simulan también `initializePowertools`
-para que sea una función normal. `src/functions/clientes/create/tests/` es el
+para que sea una función normal. `src/functions/clientesSam/create/tests/` es el
 ejemplo más completo: reglas, procedimiento y handler (201, 400, 409, 500).
 
 ---
@@ -293,11 +293,11 @@ función que las necesita a partir de sus parámetros. La versión con Secrets
 Manager está comentada en `template.yaml` y `src/shared/database/index.mjs`:
 se desactivó porque cobra por secreto aunque no se use.
 
-`sql/clientes.sql` tiene la tabla y los cinco procedimientos del CRUD.
+`sql/clientesSam.sql` tiene la tabla y los cinco procedimientos del CRUD.
 `docs/local-db.md` explica cómo levantar un MySQL local con Docker y cómo
 darle una base a las Lambdas desplegadas.
 
-**Estado actual:** las rutas `/clientes` no están desplegadas porque el
+**Estado actual:** las rutas `/clientes-sam` no están desplegadas porque el
 ambiente `dev` no tiene base de datos. El código y las pruebas sí están;
 `docs/clientes-example.md` tiene los bloques para reactivarlas.
 
