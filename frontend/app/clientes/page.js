@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import Confirmacion from '@/components/Confirmacion';
 import { ApiError, createClienteSam, deleteClienteSam, listClientesSam, updateClienteSam } from '@/lib/api';
 
 const VACIO = { nombre: '', email: '', telefono: '' };
@@ -13,6 +14,7 @@ export default function Clientes() {
   const [form, setForm] = useState(VACIO);
   const [errores, setErrores] = useState({}); // { campo: mensaje }
   const [estado, setEstado] = useState(null); // { tipo: 'ok'|'error', texto }
+  const [porBorrar, setPorBorrar] = useState(null); // cliente pendiente de confirmar
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -70,8 +72,10 @@ export default function Clientes() {
     }
   };
 
-  const borrar = async (cliente) => {
-    if (!confirm(`¿Borrar a ${cliente.nombre}?`)) return;
+  const borrar = async () => {
+    const cliente = porBorrar;
+    setPorBorrar(null);
+
     try {
       await deleteClienteSam(cliente.clienteId);
       setEstado({ tipo: 'ok', texto: 'Cliente borrado' });
@@ -149,12 +153,24 @@ export default function Clientes() {
               <td>{cliente.telefono ?? '—'}</td>
               <td className="acciones-fila">
                 <button className="secundario" onClick={() => editar(cliente)}>Editar</button>
-                <button className="peligro" onClick={() => borrar(cliente)}>Borrar</button>
+                <button className="peligro" onClick={() => setPorBorrar(cliente)}>Borrar</button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      <Confirmacion
+        abierto={porBorrar !== null}
+        titulo="Borrar cliente"
+        mensaje={porBorrar
+          ? `Se va a borrar a ${porBorrar.nombre} (${porBorrar.email}). Esta acción no se puede deshacer.`
+          : ''}
+        etiquetaConfirmar="Borrar"
+        peligro
+        onConfirmar={borrar}
+        onCancelar={() => setPorBorrar(null)}
+      />
     </>
   );
 }

@@ -213,3 +213,39 @@ td.acciones-fila button {
   padding: 12px 16px;
   margin: 12px 0;
 }
+
+/* Dialogo de confirmacion. El <dialog> nativo trae el ::backdrop y el cierre
+   con Escape; aqui solo va la apariencia. */
+.dialogo {
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 20px 22px;
+  max-width: 400px;
+  color: var(--texto);
+  background: #fff;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 18%);
+}
+
+.dialogo::backdrop {
+  background: rgb(15 23 42 / 45%);
+}
+
+.dialogo h3 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.dialogo p {
+  margin: 0 0 18px;
+  color: var(--suave);
+}
+
+.dialogo .acciones {
+  justify-content: flex-end;
+}
+
+button.peligro-solido {
+  background: var(--error);
+  border-color: var(--error);
+  color: #fff;
+}
