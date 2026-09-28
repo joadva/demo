@@ -4,8 +4,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "env:aws": "node scripts/aws-exports-to-env.mjs"
+    "env:aws": "node scripts/aws-exports-to-env.mjs",
+    "preview": "npx --yes serve out"
   },
   "dependencies": {
     "next": "^16.3.5",

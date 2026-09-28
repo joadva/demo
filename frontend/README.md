@@ -3,10 +3,10 @@
 Muestra cómo un frontend se conecta al API desplegado con SAM desde
 [`joadva/demo`](https://github.com/joadva/demo). Dos páginas:
 
-- `/` — explica los tres pasos de la conexión y prueba en vivo `/ping`,
-  `/info` y `/echo` (incluido un 400 del gateway).
-- `/clientes-sam/` — CRUD completo con errores por campo. Necesita las rutas
-  `/clientes-sam` desplegadas y con base de datos (`docs/clientes-example.md` del
+- `/` — explica los tres pasos de la conexión y prueba en vivo el listado y
+  los dos tipos de 400 (el del gateway y el de la Lambda).
+- `/clientes/` — CRUD completo con errores por campo. Necesita las rutas
+  `/clientes-sam` desplegadas y con base de datos (ver `docs/local-db.md` del
   backend).
 
 Es un sitio estático (`output: 'export'`): no hay servidor de Next, el
@@ -56,6 +56,9 @@ npm install
 Copy-Item .env.local.example .env.local   # y pon la URL real
 npm run dev                               # http://localhost:3000
 ```
+
+No uses `next start`: con `output: 'export'` no hay servidor que arrancar.
+Para ver el sitio ya compilado, `npm run build` y luego `npm run preview`.
 
 O, si tienes el `aws-exports.json` del backend a la mano:
 
