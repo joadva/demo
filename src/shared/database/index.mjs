@@ -4,14 +4,50 @@ import { getSecret } from '@aws-lambda-powertools/parameters/secrets';
 import { logger } from '../lambda-powertools/index.mjs';
 
 /**
+ * Convierte el JSON de un secreto en opciones para mysql2, aceptando las
+ * formas en que suele venir:
+ *
+ *   - envuelto:  { "connectionDetails": { host, user, password, port, database } }
+ *   - plano:     { host, user, password, port, database }
+ *   - de RDS:    { host, username, password, port, dbname }   <- el que genera
+ *                AWS cuando dejas que RDS administre el secreto; usa "username"
+ *                y "dbname", y a veces no trae el nombre de la base.
+ *
+ * Cuando el secreto no trae la base de datos se usa DB_DATABASE, para no tener
+ * que rehacer un secreto administrado por RDS solo por ese campo.
+ * @param {Object} secret - JSON del secreto ya parseado.
+ * @return {Object} Opciones de conexion para mysql2.
+ */
+export const leerCredenciales = (secret) => {
+  const datos = secret?.connectionDetails ?? secret ?? {};
+
+  const credenciales = {
+    host: datos.host,
+    user: datos.user ?? datos.username,
+    password: datos.password,
+    port: Number(datos.port ?? 3306),
+    database: datos.database ?? datos.dbname ?? process.env.DB_DATABASE
+  };
+
+  // Sin esto el fallo llega como un TypeError al destructurar, que no dice
+  // cual de los campos falta ni en que forma venia el secreto.
+  const faltantes = ['host', 'user', 'password', 'database']
+      .filter((campo) => !credenciales[campo]);
+
+  if (faltantes.length) {
+    throw new Error(
+        `El secreto no trae ${faltantes.join(', ')}. ` +
+        `Claves recibidas: ${Object.keys(datos).join(', ') || '(ninguna)'}.`
+    );
+  }
+
+  return credenciales;
+};
+
+/**
  * Lee las credenciales del secreto de Secrets Manager cuyo ARN llega en
  * DATABASE_CONNECTION_SECRET. template.yaml le pasa a cada funcion el secreto
  * de lectura o el de escritura segun lo que haga.
- *
- * El secreto guarda un JSON con esta forma:
- *   { "connectionDetails": {
- *       "host": "...", "user": "...", "password": "...",
- *       "port": "3306", "database": "..." } }
  *
  * getSecret() cachea el valor los segundos de maxAge, asi que invocaciones
  * seguidas en una misma Lambda tibia no vuelven a pegarle a la API.
@@ -23,9 +59,7 @@ const credencialesDelSecreto = async () => {
     maxAge: 300
   });
 
-  const { host, user, password, port, database } = secret.connectionDetails;
-
-  return { host, user, password, port: Number(port), database };
+  return leerCredenciales(secret);
 };
 
 /**
