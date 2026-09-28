@@ -41,6 +41,24 @@ describe('leerCredenciales', () => {
     })).toEqual(esperado);
   });
 
+  it('acepta las claves con prefijo DB_, como el secreto de SofiPay', () => {
+    expect(leerCredenciales({
+      DB_HOST: 'db.demo.mx', DB_USER: 'demo', DB_PASS: 'secreta', DB_PORT: '3306', DB_NAME: 'demo'
+    })).toEqual(esperado);
+  });
+
+  it('acepta DB_PASSWORD y DB_DATABASE como variantes', () => {
+    expect(leerCredenciales({
+      DB_HOST: 'db.demo.mx', DB_USER: 'demo', DB_PASSWORD: 'secreta', DB_PORT: '3306', DB_DATABASE: 'demo'
+    })).toEqual(esperado);
+  });
+
+  it('ignora una clave presente pero vacia y sigue con el siguiente alias', () => {
+    expect(leerCredenciales({
+      host: '', DB_HOST: 'db.demo.mx', user: '', DB_USER: 'demo', DB_PASS: 'secreta', DB_PORT: '3306', DB_NAME: 'demo'
+    })).toEqual(esperado);
+  });
+
   it('usa 3306 cuando el secreto no trae puerto', () => {
     expect(leerCredenciales({ host: 'db.demo.mx', user: 'demo', password: 'secreta', database: 'demo' }).port).toBe(3306);
   });

@@ -3,30 +3,41 @@ import { getSecret } from '@aws-lambda-powertools/parameters/secrets';
 
 import { logger } from '../lambda-powertools/index.mjs';
 
+// Cada campo de conexion con los nombres que se le ven en la practica. El
+// orden importa solo si un secreto trajera varios a la vez, cosa que no pasa.
+const ALIAS = {
+  host: ['host', 'DB_HOST'],
+  user: ['user', 'username', 'DB_USER'],
+  password: ['password', 'DB_PASS', 'DB_PASSWORD'],
+  port: ['port', 'DB_PORT'],
+  database: ['database', 'dbname', 'DB_NAME', 'DB_DATABASE']
+};
+
 /**
  * Convierte el JSON de un secreto en opciones para mysql2, aceptando las
  * formas en que suele venir:
  *
- *   - envuelto:  { "connectionDetails": { host, user, password, port, database } }
- *   - plano:     { host, user, password, port, database }
- *   - de RDS:    { host, username, password, port, dbname }   <- el que genera
- *                AWS cuando dejas que RDS administre el secreto; usa "username"
- *                y "dbname", y a veces no trae el nombre de la base.
+ *   - envuelto:    { "connectionDetails": { host, user, password, port, database } }
+ *   - plano:       { host, user, password, port, database }
+ *   - de RDS:      { host, username, password, port, dbname }  <- el que genera
+ *                  AWS cuando deja que RDS administre el secreto
+ *   - con prefijo: { DB_HOST, DB_USER, DB_PASS, DB_PORT, DB_NAME }
  *
- * Cuando el secreto no trae la base de datos se usa DB_DATABASE, para no tener
- * que rehacer un secreto administrado por RDS solo por ese campo.
+ * Cuando el secreto no trae la base de datos se usa DB_DATABASE del entorno,
+ * para no tener que rehacer un secreto ajeno solo por ese campo.
  * @param {Object} secret - JSON del secreto ya parseado.
  * @return {Object} Opciones de conexion para mysql2.
  */
 export const leerCredenciales = (secret) => {
   const datos = secret?.connectionDetails ?? secret ?? {};
+  const valor = (campo) => ALIAS[campo].map((alias) => datos[alias]).find((v) => v !== undefined && v !== '');
 
   const credenciales = {
-    host: datos.host,
-    user: datos.user ?? datos.username,
-    password: datos.password,
-    port: Number(datos.port ?? 3306),
-    database: datos.database ?? datos.dbname ?? process.env.DB_DATABASE
+    host: valor('host'),
+    user: valor('user'),
+    password: valor('password'),
+    port: Number(valor('port') ?? 3306),
+    database: valor('database') ?? process.env.DB_DATABASE
   };
 
   // Diagnostico de la forma del secreto. La contrasenia NO se registra: un log
