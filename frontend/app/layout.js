@@ -13,7 +13,9 @@ export default function RootLayout({ children }) {
       <body>
         <header>
           <nav>
-            <Link href="/">Conexión</Link>
+            {/* La pagina de Conexion esta oculta por ahora. Sigue disponible
+                en /conexion/; para volver a mostrarla, descomenta esta linea.
+            <Link href="/conexion/">Conexión</Link> */}
             <Link href="/clientes/">Clientes (CRUD)</Link>
           </nav>
         </header>
