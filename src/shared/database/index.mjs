@@ -29,6 +29,19 @@ export const leerCredenciales = (secret) => {
     database: datos.database ?? datos.dbname ?? process.env.DB_DATABASE
   };
 
+  // Diagnostico de la forma del secreto. La contrasenia NO se registra: un log
+  // de CloudWatch se conserva y lo lee cualquiera con acceso a la cuenta; con
+  // saber si venia o no basta para localizar el problema.
+  logger.info('Credenciales leidas del secreto', {
+    clavesDelSecreto: Object.keys(datos),
+    envuelto: Boolean(secret?.connectionDetails),
+    host: credenciales.host,
+    user: credenciales.user,
+    port: credenciales.port,
+    database: credenciales.database,
+    tienePassword: Boolean(credenciales.password)
+  });
+
   // Sin esto el fallo llega como un TypeError al destructurar, que no dice
   // cual de los campos falta ni en que forma venia el secreto.
   const faltantes = ['host', 'user', 'password', 'database']
@@ -54,10 +67,13 @@ export const leerCredenciales = (secret) => {
  * @return {Promise<Object>} Opciones de conexion para mysql2.
  */
 const credencialesDelSecreto = async () => {
-  const secret = await getSecret(process.env.DATABASE_CONNECTION_SECRET, {
-    transform: 'json',
-    maxAge: 300
-  });
+  const arn = process.env.DATABASE_CONNECTION_SECRET;
+
+  // Solo el nombre del secreto, no la cuenta ni la region: sirve para ver en
+  // el log si a la funcion le llego el de lectura o el de escritura.
+  logger.info('Leyendo el secreto', { secreto: arn.split(':secret:').at(-1) });
+
+  const secret = await getSecret(arn, { transform: 'json', maxAge: 300 });
 
   return leerCredenciales(secret);
 };
