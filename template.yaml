@@ -27,6 +27,14 @@ Parameters:
     NoEcho: true
     Description: Secreto con el usuario de MySQL que puede escribir
 
+  # Solo hace falta si los secretos estan cifrados con una llave KMS propia
+  # (una administrada por el cliente). Con la llave por omision de Secrets
+  # Manager se deja vacio: dentro de la misma cuenta no se necesita permiso.
+  DatabaseKmsKeyArn:
+    Type: String
+    Default: ''
+    Description: ARN de la llave KMS que cifra los secretos, si es propia
+
   # Alternativa sin Secrets Manager: las credenciales como variables de entorno.
   # Ver la nota de createConnection en src/shared/database/index.mjs.
   #
@@ -44,6 +52,9 @@ Parameters:
   # DBDatabase:
   #   Type: String
   #   NoEcho: true
+
+Conditions:
+  TieneLlaveKms: !Not [!Equals [!Ref DatabaseKmsKeyArn, '']]
 
 Globals:
   Function:
@@ -95,6 +106,12 @@ Resources:
             - Effect: Allow
               Action: secretsmanager:GetSecretValue
               Resource: !Ref ReadSecretArn
+            - !If
+              - TieneLlaveKms
+              - Effect: Allow
+                Action: kms:Decrypt
+                Resource: !Ref DatabaseKmsKeyArn
+              - !Ref AWS::NoValue
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -132,6 +149,12 @@ Resources:
             - Effect: Allow
               Action: secretsmanager:GetSecretValue
               Resource: !Ref WriteSecretArn
+            - !If
+              - TieneLlaveKms
+              - Effect: Allow
+                Action: kms:Decrypt
+                Resource: !Ref DatabaseKmsKeyArn
+              - !Ref AWS::NoValue
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -169,6 +192,12 @@ Resources:
             - Effect: Allow
               Action: secretsmanager:GetSecretValue
               Resource: !Ref ReadSecretArn
+            - !If
+              - TieneLlaveKms
+              - Effect: Allow
+                Action: kms:Decrypt
+                Resource: !Ref DatabaseKmsKeyArn
+              - !Ref AWS::NoValue
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -206,6 +235,12 @@ Resources:
             - Effect: Allow
               Action: secretsmanager:GetSecretValue
               Resource: !Ref WriteSecretArn
+            - !If
+              - TieneLlaveKms
+              - Effect: Allow
+                Action: kms:Decrypt
+                Resource: !Ref DatabaseKmsKeyArn
+              - !Ref AWS::NoValue
     Metadata:
       BuildMethod: esbuild
       BuildProperties:
@@ -243,6 +278,12 @@ Resources:
             - Effect: Allow
               Action: secretsmanager:GetSecretValue
               Resource: !Ref WriteSecretArn
+            - !If
+              - TieneLlaveKms
+              - Effect: Allow
+                Action: kms:Decrypt
+                Resource: !Ref DatabaseKmsKeyArn
+              - !Ref AWS::NoValue
     Metadata:
       BuildMethod: esbuild
       BuildProperties:

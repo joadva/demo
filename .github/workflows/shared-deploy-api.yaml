@@ -75,6 +75,9 @@ jobs:
           # pasan por GitHub: las Lambdas las leen del secreto en ejecucion.
           replace-in-files --string='{{ReadSecretArn}}' --replacement='${{ secrets.READ_SECRET_DB }}' ./samconfig.ci.yaml
           replace-in-files --string='{{WriteSecretArn}}' --replacement='${{ secrets.WRITE_SECRET_DB }}' ./samconfig.ci.yaml
+          # Opcional: solo si los secretos usan una llave KMS propia. Si el
+          # secret no existe queda vacio y la plantilla omite el permiso.
+          replace-in-files --string='{{DatabaseKmsKeyArn}}' --replacement='${{ secrets.DB_KMS_KEY_ARN }}' ./samconfig.ci.yaml
 
       - name: SAM Build
         if: ${{ steps.cache-sam-build.outputs.cache-hit != 'true' }}
