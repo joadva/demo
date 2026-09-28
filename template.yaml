@@ -28,8 +28,13 @@ Parameters:
     Description: Secreto con el usuario de MySQL que puede escribir
 
   # Solo hace falta si los secretos estan cifrados con una llave KMS propia
-  # (una administrada por el cliente). Con la llave por omision de Secrets
-  # Manager se deja vacio: dentro de la misma cuenta no se necesita permiso.
+  # (administrada por el cliente). Con la llave por omision aws/secretsmanager
+  # se deja vacio: dentro de la misma cuenta no se necesita permiso extra.
+  #
+  # Para activarlo hay que agregar la linea en samconfig.ci.yaml y su
+  # replace-in-files en shared-deploy-api.yaml. Ojo: sam deploy rechaza un
+  # override vacio ('DatabaseKmsKeyArn=' no es formato valido), asi que solo
+  # se agrega cuando de verdad haya un ARN que pasar.
   DatabaseKmsKeyArn:
     Type: String
     Default: ''

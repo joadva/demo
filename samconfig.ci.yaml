@@ -11,5 +11,4 @@ default:
       parameter_overrides:
         - 'ReadSecretArn={{ReadSecretArn}}'
         - 'WriteSecretArn={{WriteSecretArn}}'
-        - 'DatabaseKmsKeyArn={{DatabaseKmsKeyArn}}'
       image_repositories: []
