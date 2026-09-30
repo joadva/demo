@@ -4,22 +4,19 @@ import { initializePowertools, logger } from '../../../shared/lambda-powertools/
 
 export const handler = initializePowertools(async (event) => {
   try {
-    // La forma del cuerpo (campos requeridos, tipos, longitudes, patron del
-    // telefono) ya la reviso el request validator de API Gateway declarado en
-    // openapi.yaml; aqui solo se aplican las reglas que el schema no alcanza.
     const datos = normalizarCliente(JSON.parse(event.body));
 
     const errores = validarCliente(datos);
     if (errores.length) {
       return getResponse(400, { message: 'Datos invalidos', errores });
     }
-
+    const demo = 0;
     const cliente = await crearCliente(datos);
 
     return getResponse(201, cliente);
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
-      return getResponse(409, { message: 'Ya existe un cliente con ese correo' });
+      return getResponse(409, { message: 'Ya existe un cliente con ese correo y existe' });
     }
 
     logger.error('Error al crear el cliente', err);

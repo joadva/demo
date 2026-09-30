@@ -5,8 +5,6 @@ import { initializePowertools, logger } from '../../../shared/lambda-powertools/
 export const handler = initializePowertools(async (event) => {
   try {
     // API Gateway solo comprueba que el parametro de ruta exista, no que sea
-    // un numero: eso se valida aqui. El cuerpo si llega ya validado contra el
-    // schema de openapi.yaml; aqui solo van las reglas que el schema no alcanza.
     const clienteId = validarClienteId(event.pathParameters?.clienteId);
     if (clienteId === null) {
       return getResponse(400, {

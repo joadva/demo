@@ -5,18 +5,6 @@ Transform:
   - AWS::Serverless-2016-10-31
 
 Parameters:
-  # ARN completo (con sufijo) de los secretos de Secrets Manager que guardan
-  # las credenciales de MySQL. Se separan por permiso: las funciones que solo
-  # consultan reciben el de lectura, las que modifican el de escritura, asi
-  # una falla en un GET no puede escribir en la base.
-  #
-  # El secreto guarda un JSON con esta forma:
-  #   { "connectionDetails": {
-  #       "host": "...", "user": "...", "password": "...",
-  #       "port": "3306", "database": "..." } }
-  #
-  # Si el secreto estuviera en otra cuenta hace falta ademas permiso kms:Decrypt
-  # sobre su llave; ver docs/recursos-otra-cuenta.md.
   ReadSecretArn:
     Type: String
     NoEcho: true
