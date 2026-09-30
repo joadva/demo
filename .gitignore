@@ -378,3 +378,9 @@ portman/portman-sandbox-config.json
 samconfig.toml
 samconfig.yaml
 .npmrc
+
+# Credenciales locales para npm run demo / npm run db:init
+.env.local
+
+# Outputs del stack descargados del pipeline (frontend/README.md)
+aws-exports.json

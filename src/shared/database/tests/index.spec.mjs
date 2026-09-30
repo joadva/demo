@@ -1,39 +1,80 @@
-import { describe, expect, it, vi } from 'vitest';
-import * as db from '../index.mjs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-describe('Database functions', () => {
-  describe('ExecuteQuery Functions', () => {
-    const sql = 'SELECT * FROM users WHERE id = ?';
-    const params = [1];
+vi.mock('@aws-lambda-powertools/parameters/secrets', () => ({
+  getSecret: vi.fn()
+}));
 
-    it('should execute query successfully', async () => {
-      // mysql2/promise resuelve [filas, campos]; no acepta callback.
-      const connectionMock = {
-        query: vi.fn().mockResolvedValue([
-          [{ id: 1, name: 'John' }, { id: 2, name: 'Jane' }],
-          []
-        ]),
-        end: vi.fn().mockResolvedValue(undefined)
-      };
+vi.mock('../../lambda-powertools/index.mjs', () => ({
+  logger: { info: vi.fn(), error: vi.fn() }
+}));
 
-      const results = await db.executeQuery(connectionMock, sql, params);
+import { leerCredenciales } from '../index.mjs';
 
-      expect(results).toEqual({ id: 1, name: 'John' });
-      expect(connectionMock.query).toHaveBeenCalledWith(sql, params);
-      expect(connectionMock.end).toHaveBeenCalled();
-    });
+const esperado = {
+  host: 'db.demo.mx',
+  user: 'demo',
+  password: 'secreta',
+  port: 3306,
+  database: 'demo'
+};
 
-    it('Should error when executing query', async () => {
-      const connectionMock = {
-        query: vi.fn().mockRejectedValue(new Error('Error in SQL query')),
-        end: vi.fn().mockResolvedValue(undefined)
-      };
+describe('leerCredenciales', () => {
+  afterEach(() => {
+    delete process.env.DB_DATABASE;
+  });
 
-      await expect(db.executeQuery(connectionMock, sql, params))
-          .rejects.toThrow('Error in SQL query');
+  it('acepta el secreto envuelto en connectionDetails', () => {
+    expect(leerCredenciales({
+      connectionDetails: { host: 'db.demo.mx', user: 'demo', password: 'secreta', port: '3306', database: 'demo' }
+    })).toEqual(esperado);
+  });
 
-      // La conexion se cierra aunque la consulta falle
-      expect(connectionMock.end).toHaveBeenCalled();
-    });
+  it('acepta el secreto con los campos planos', () => {
+    expect(leerCredenciales({
+      host: 'db.demo.mx', user: 'demo', password: 'secreta', port: '3306', database: 'demo'
+    })).toEqual(esperado);
+  });
+
+  it('acepta el formato que genera RDS: username y dbname', () => {
+    expect(leerCredenciales({
+      host: 'db.demo.mx', username: 'demo', password: 'secreta', port: 3306, dbname: 'demo'
+    })).toEqual(esperado);
+  });
+
+  it('acepta las claves con prefijo DB_, como el secreto de SofiPay', () => {
+    expect(leerCredenciales({
+      DB_HOST: 'db.demo.mx', DB_USER: 'demo', DB_PASS: 'secreta', DB_PORT: '3306', DB_NAME: 'demo'
+    })).toEqual(esperado);
+  });
+
+  it('acepta DB_PASSWORD y DB_DATABASE como variantes', () => {
+    expect(leerCredenciales({
+      DB_HOST: 'db.demo.mx', DB_USER: 'demo', DB_PASSWORD: 'secreta', DB_PORT: '3306', DB_DATABASE: 'demo'
+    })).toEqual(esperado);
+  });
+
+  it('ignora una clave presente pero vacia y sigue con el siguiente alias', () => {
+    expect(leerCredenciales({
+      host: '', DB_HOST: 'db.demo.mx', user: '', DB_USER: 'demo', DB_PASS: 'secreta', DB_PORT: '3306', DB_NAME: 'demo'
+    })).toEqual(esperado);
+  });
+
+  it('usa 3306 cuando el secreto no trae puerto', () => {
+    expect(leerCredenciales({ host: 'db.demo.mx', user: 'demo', password: 'secreta', database: 'demo' }).port).toBe(3306);
+  });
+
+  it('toma la base de DB_DATABASE cuando el secreto no la trae', () => {
+    process.env.DB_DATABASE = 'demo';
+
+    expect(leerCredenciales({ host: 'db.demo.mx', username: 'demo', password: 'secreta' })).toEqual(esperado);
+  });
+
+  it('dice que campos faltan y que claves llegaron', () => {
+    expect(() => leerCredenciales({ host: 'db.demo.mx', usuario: 'demo' }))
+        .toThrow('El secreto no trae user, password, database. Claves recibidas: host, usuario.');
+  });
+
+  it('avisa cuando el secreto llega vacio', () => {
+    expect(() => leerCredenciales(null)).toThrow('Claves recibidas: (ninguna)');
   });
 });

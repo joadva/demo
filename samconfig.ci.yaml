@@ -9,9 +9,6 @@ default:
       stack_name: {{StackName}}
       capabilities: CAPABILITY_IAM
       parameter_overrides:
-        - 'DBHost={{DBHost}}'
-        - 'DBUser={{DBUser}}'
-        - 'DBPassword={{DBPassword}}'
-        - 'DBPort={{DBPort}}'
-        - 'DBDatabase={{DBDatabase}}'
+        - 'ReadSecretArn={{ReadSecretArn}}'
+        - 'WriteSecretArn={{WriteSecretArn}}'
       image_repositories: []

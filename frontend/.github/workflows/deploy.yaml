@@ -1,0 +1,68 @@
+name: Deploy Frontend
+
+# Compila el sitio estatico y lo publica en GitHub Pages del propio repo.
+# Requiere: Settings -> Pages -> Source: "GitHub Actions", y la variable de
+# repositorio NEXT_PUBLIC_API_URL con la URL del API (Settings -> Secrets and
+# variables -> Actions -> Variables). La URL de un stack fijo no cambia entre
+# despliegues del backend, asi que se pone una sola vez.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Check API URL
+        run: |
+          if [ -z "${{ vars.NEXT_PUBLIC_API_URL }}" ]; then
+            echo "::error::Falta la variable de repositorio NEXT_PUBLIC_API_URL."
+            exit 1
+          fi
+          echo "* API: ${{ vars.NEXT_PUBLIC_API_URL }}" >> $GITHUB_STEP_SUMMARY
+
+      # En un sitio de proyecto de GitHub Pages la app vive en /<repo>/, por
+      # eso el basePath. Si usas dominio propio o el repo <usuario>.github.io,
+      # quita la linea NEXT_PUBLIC_BASE_PATH.
+      - name: Build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+        run: |
+          npm ci
+          npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out
+
+  deploy:
+    name: Deploy to Pages
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

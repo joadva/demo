@@ -53,6 +53,8 @@ El borrado de los stacks efímeros lo hace `cleanup-dev.yaml`, que se dispara so
 En el Environment `dev` de GitHub:
 
 - **Variables:** `PIPELINE_EXECUTION_ROLE`, `CLOUDFORMATION_EXECUTION_ROLE`, `ARTIFACTS_BUCKET_NAME`
-- **Secrets:** `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_PORT`, `DB_DATABASE`
+- **Secrets:** `READ_SECRET_DB` y `WRITE_SECRET_DB`, los ARN de los dos
+  secretos de Secrets Manager con las credenciales de MySQL (uno de sólo
+  lectura, otro de escritura)
 
 Los tres valores de las variables salen de los Outputs de la pila `pipeline-bootstrap.yaml`.
